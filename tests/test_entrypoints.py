@@ -1,7 +1,14 @@
-"""Tests that the three custom transforms are discoverable via moonstar.transforms entrypoints."""
+"""Tests that the four custom transforms are discoverable via moonstar.transforms entrypoints."""
 import asyncio
 
 from moonstar_core.registry import ProviderRegistry
+
+_TRANSFORM_NAMES = (
+    "ConservationLawCheckTransform",
+    "QMCalculationTransform",
+    "ReferenceDataLookupTransform",
+    "DimensionConsistencyTransform",
+)
 
 
 def test_conservation_law_check_transform_entrypoint():
@@ -25,12 +32,15 @@ def test_reference_data_lookup_transform_entrypoint():
     assert fn is not None
 
 
-def test_all_three_entrypoints_are_awaitable():
+def test_dimension_consistency_transform_entrypoint():
     reg = ProviderRegistry()
     reg.load_installed()
-    for name in (
-        "ConservationLawCheckTransform",
-        "QMCalculationTransform",
-        "ReferenceDataLookupTransform",
-    ):
+    fn = reg.get("DimensionConsistencyTransform")
+    assert fn is not None
+
+
+def test_all_four_entrypoints_are_awaitable():
+    reg = ProviderRegistry()
+    reg.load_installed()
+    for name in _TRANSFORM_NAMES:
         assert asyncio.iscoroutinefunction(reg.get(name))
