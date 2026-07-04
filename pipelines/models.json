@@ -1,0 +1,5 @@
+{
+  "MODEL_EXTRACTOR": "deepseek/deepseek-v4-flash",
+  "MODEL_CRITIC": "deepseek/deepseek-v4-pro",
+  "MODEL_DECISION_MAKER": "deepseek/deepseek-v4-pro"
+}

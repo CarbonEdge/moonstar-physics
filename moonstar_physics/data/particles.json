@@ -1,0 +1,18 @@
+{
+  "electron": {"mass_mev": 0.5109989, "charge": "-1", "spin": 0.5, "baryon_number": "0", "electron_number": 1, "muon_number": 0, "tau_number": 0, "mean_lifetime_s": "stable"},
+  "electron_neutrino": {"mass_mev": 0.0000022, "charge": "0", "spin": 0.5, "baryon_number": "0", "electron_number": 1, "muon_number": 0, "tau_number": 0, "mean_lifetime_s": "stable"},
+  "muon": {"mass_mev": 105.6584, "charge": "-1", "spin": 0.5, "baryon_number": "0", "electron_number": 0, "muon_number": 1, "tau_number": 0, "mean_lifetime_s": 2.197e-6},
+  "muon_neutrino": {"mass_mev": 0.00017, "charge": "0", "spin": 0.5, "baryon_number": "0", "electron_number": 0, "muon_number": 1, "tau_number": 0, "mean_lifetime_s": "stable"},
+  "tau": {"mass_mev": 1776.86, "charge": "-1", "spin": 0.5, "baryon_number": "0", "electron_number": 0, "muon_number": 0, "tau_number": 1, "mean_lifetime_s": 2.903e-13},
+  "tau_neutrino": {"mass_mev": 0.0155, "charge": "0", "spin": 0.5, "baryon_number": "0", "electron_number": 0, "muon_number": 0, "tau_number": 1, "mean_lifetime_s": "stable"},
+  "photon": {"mass_mev": 0.0, "charge": "0", "spin": 1.0, "baryon_number": "0", "electron_number": 0, "muon_number": 0, "tau_number": 0, "mean_lifetime_s": "stable"},
+  "proton": {"mass_mev": 938.272, "charge": "1", "spin": 0.5, "baryon_number": "1", "electron_number": 0, "muon_number": 0, "tau_number": 0, "mean_lifetime_s": "stable"},
+  "neutron": {"mass_mev": 939.5654, "charge": "0", "spin": 0.5, "baryon_number": "1", "electron_number": 0, "muon_number": 0, "tau_number": 0, "mean_lifetime_s": 879.4},
+  "up_quark": {"mass_mev": 2.2, "charge": "2/3", "spin": 0.5, "baryon_number": "1/3", "electron_number": 0, "muon_number": 0, "tau_number": 0, "mean_lifetime_s": "stable"},
+  "down_quark": {"mass_mev": 4.7, "charge": "-1/3", "spin": 0.5, "baryon_number": "1/3", "electron_number": 0, "muon_number": 0, "tau_number": 0, "mean_lifetime_s": "stable"},
+  "w_boson": {"mass_mev": 80379.0, "charge": "1", "spin": 1.0, "baryon_number": "0", "electron_number": 0, "muon_number": 0, "tau_number": 0, "mean_lifetime_s": 3.0e-25},
+  "z_boson": {"mass_mev": 91187.6, "charge": "0", "spin": 1.0, "baryon_number": "0", "electron_number": 0, "muon_number": 0, "tau_number": 0, "mean_lifetime_s": 3.0e-25},
+  "higgs_boson": {"mass_mev": 125250.0, "charge": "0", "spin": 0.0, "baryon_number": "0", "electron_number": 0, "muon_number": 0, "tau_number": 0, "mean_lifetime_s": 1.6e-22},
+  "pion_plus": {"mass_mev": 139.57, "charge": "1", "spin": 0.0, "baryon_number": "0", "electron_number": 0, "muon_number": 0, "tau_number": 0, "mean_lifetime_s": 2.6e-8},
+  "pion_zero": {"mass_mev": 134.98, "charge": "0", "spin": 0.0, "baryon_number": "0", "electron_number": 0, "muon_number": 0, "tau_number": 0, "mean_lifetime_s": 8.4e-17}
+}

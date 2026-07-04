@@ -1,0 +1,127 @@
+pipeline:
+  name: physics-hypothesis
+  version: "1.0"
+  description: >
+    Extract a natural-language quantum-physics hypothesis into structured
+    JSON, run it through deterministic conservation-law/QM/reference checks
+    in parallel with an LLM theory critic, challenge the consensus with a
+    devil's advocate, then synthesize a conversational verdict.
+
+transforms:
+  - name: Extractor
+    type: LlmTransform
+    config:
+      model: "{{MODEL_EXTRACTOR}}"
+      max_tokens: 700
+      system: |
+        You extract a physics hypothesis into structured JSON. Output ONLY
+        the JSON object below, no markdown fences, no commentary.
+
+        Schema:
+        {
+          "hypothesis_type": "decay | reaction | bound_state | property_claim",
+          "particles_involved": ["<particle names, e.g. muon, electron, electron_neutrino, muon_neutrino, photon, proton, neutron, up_quark, down_quark, w_boson, z_boson, higgs_boson, pion_plus, pion_zero>"],
+          "initial_state": [{"particle": "<name>", "antiparticle": false, "count": 1}],
+          "final_state": [{"particle": "<name>", "antiparticle": false, "count": 1}],
+          "claimed_values": {"energy_ev": null, "delta_p_min_kg_m_s": null, "quantum_numbers": {}},
+          "system_description": "<free text describing any bound-state/QM system implied>",
+          "system_params": {
+            "type": "infinite_well | harmonic_oscillator | hydrogen_energy_level | uncertainty_bound | null",
+            "width_nm": null,
+            "mass": null,
+            "n": null,
+            "omega_rad_s": null,
+            "delta_x_m": null
+          }
+        }
+
+        Rules:
+        - Use antiparticle: true for antiparticles (e.g. an emitted anti-neutrino)
+          instead of inventing separate particle names.
+        - Leave any field null/empty if the hypothesis doesn't specify it —
+          do not guess values.
+        - If the hypothesis isn't about a decay/reaction, leave initial_state
+          and final_state as empty lists.
+        - If the hypothesis isn't about a solvable bound-state system, leave
+          system_params.type as null.
+
+  # Wave 1 — all four take `input: Extractor`, run in parallel once it completes
+  - name: conservation_check
+    type: ConservationLawCheckTransform
+    input: Extractor
+
+  - name: qm_calculation
+    type: QMCalculationTransform
+    input: Extractor
+
+  - name: reference_lookup
+    type: ReferenceDataLookupTransform
+    input: Extractor
+
+  - name: theory_critic
+    type: LlmTransform
+    input: Extractor
+    config:
+      model: "{{MODEL_CRITIC}}"
+      max_tokens: 700
+      system: |
+        You are a theoretical physics critic. You receive a structured
+        physics hypothesis (JSON). Critique its theoretical soundness
+        independent of any deterministic conservation-law or numerical
+        checks — those are handled elsewhere. Focus on: is the premise
+        well-posed, does it conflate concepts, is it consistent with
+        established quantum theory in spirit (not just bookkeeping)?
+
+        OUTPUT ONLY THIS JSON (no markdown, no code fences):
+        {"well_posed": true, "theoretical_concerns": ["..."], "assessment": "2-3 sentence narrative"}
+
+  - name: devils_advocate
+    type: LlmTransform
+    input: [conservation_check, qm_calculation, reference_lookup, theory_critic]
+    config:
+      model: "{{MODEL_CRITIC}}"
+      max_tokens: 600
+      system: |
+        You receive four wave-1 outputs on a physics hypothesis: a
+        conservation-law check, a QM calculation, a reference-data lookup,
+        and a theory critic's assessment. Challenge the emerging consensus:
+
+        1. Do the deterministic checks (conservation_check, qm_calculation)
+           agree with the theory critic's take? If not, say so explicitly —
+           a deterministic "violated" verdict should outweigh LLM intuition.
+        2. Is there a check that returned "not_applicable" that the
+           synthesizer should be careful not to treat as "passed"?
+        3. What's the strongest case that this hypothesis, even if it
+           passes the checks that fired, is still not physically meaningful?
+
+        OUTPUT ONLY THIS JSON (no markdown, no code fences):
+        {"agreement": "description", "contradiction": "description or none", "coverage_gaps": ["which checks didn't fire and why that matters"], "strongest_objection": "one sentence"}
+
+  - name: synthesizer
+    type: LlmTransform
+    input: [conservation_check, qm_calculation, reference_lookup, theory_critic, devils_advocate]
+    config:
+      model: "{{MODEL_DECISION_MAKER}}"
+      max_tokens: 1200
+      system: |
+        You are producing the final answer for someone who asked whether a
+        quantum-physics hypothesis makes sense. You receive: a
+        conservation-law check verdict, a QM calculation verdict, a
+        reference-data lookup, a theory critic's assessment, and a devil's
+        advocate challenge.
+
+        Write a conversational explanation (not just a verdict): what the
+        hypothesis claims, what the deterministic checks found (be specific
+        about which law was violated, if any, or which check didn't apply),
+        what the theory critic and devil's advocate added, and your overall
+        take on whether this makes sense. If any check returned
+        "not_applicable", say so explicitly rather than implying it passed —
+        a "not_applicable" is missing evidence, not a green light.
+
+        End with a one-line verdict: PLAUSIBLE, INCONSISTENT, or
+        INCONCLUSIVE (use INCONCLUSIVE when the deterministic checks didn't
+        apply and only LLM reasoning is available).
+
+budget:
+  max_usd: 1.00
+  max_wallclock_seconds: 180
