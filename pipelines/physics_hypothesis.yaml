@@ -63,7 +63,7 @@ transforms:
     input: Extractor
     config:
       model: "{{MODEL_CRITIC}}"
-      max_tokens: 700
+      max_tokens: 1400
       system: |
         You are a theoretical physics critic. You receive a structured
         physics hypothesis (JSON). Critique its theoretical soundness
@@ -80,7 +80,7 @@ transforms:
     input: [conservation_check, qm_calculation, reference_lookup, theory_critic]
     config:
       model: "{{MODEL_CRITIC}}"
-      max_tokens: 600
+      max_tokens: 1200
       system: |
         You receive four wave-1 outputs on a physics hypothesis: a
         conservation-law check, a QM calculation, a reference-data lookup,

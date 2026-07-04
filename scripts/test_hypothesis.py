@@ -18,7 +18,17 @@ from pathlib import Path
 
 import httpx
 
-_PIPELINE_DIR = Path(__file__).parent.parent / "pipelines"
+# Windows consoles default stdout/stderr to the system codepage (e.g. cp1252),
+# which raises UnicodeEncodeError on ordinary LLM output (em/en dashes, smart
+# quotes, non-breaking hyphens). Force UTF-8 with lossy fallback rather than
+# crashing after a real, already-completed pipeline run.
+for _stream in (sys.stdout, sys.stderr):
+    if hasattr(_stream, "reconfigure"):
+        _stream.reconfigure(encoding="utf-8", errors="replace")
+
+_ROOT_DIR = Path(__file__).parent.parent
+_PIPELINE_DIR = _ROOT_DIR / "pipelines"
+_RUNS_DIR = _ROOT_DIR / "runs"
 _POLL_INTERVAL_SECONDS = 2
 _MAX_POLLS = 90
 
@@ -29,6 +39,19 @@ def _load_pipeline_yaml() -> str:
     for key, model in models.items():
         text = text.replace("{{" + key + "}}", model)
     return text
+
+
+def _save_session_artifacts(session_id: str, status_data: dict) -> Path:
+    """Persist the full session response (all step artifacts) to disk.
+
+    Printed output only ever shows the synthesizer's writeup — when an
+    earlier step degrades silently (truncated response, empty output), the
+    only way to diagnose it is to have the raw artifacts on hand.
+    """
+    _RUNS_DIR.mkdir(parents=True, exist_ok=True)
+    out_path = _RUNS_DIR / f"{session_id}.json"
+    out_path.write_text(json.dumps(status_data, indent=2, ensure_ascii=False), encoding="utf-8")
+    return out_path
 
 
 async def _run(hypothesis: str) -> int:
@@ -59,6 +82,10 @@ async def _run(hypothesis: str) -> int:
             status_data = status_resp.json()
             status = status_data.get("status")
 
+            if status in ("completed", "failed", "rejected"):
+                artifacts_path = _save_session_artifacts(session_id, status_data)
+                print(f"Full session artifacts saved to: {artifacts_path}")
+
             if status == "completed":
                 for artifact in status_data.get("artifacts", []):
                     if artifact.get("transform_name") == "synthesizer":
@@ -69,7 +96,7 @@ async def _run(hypothesis: str) -> int:
                 return 1
 
             if status in ("failed", "rejected"):
-                print(f"ERROR: session {status}: {status_data}", file=sys.stderr)
+                print(f"ERROR: session {status}: see {artifacts_path} for details", file=sys.stderr)
                 return 1
 
         print("ERROR: timed out waiting for session to complete", file=sys.stderr)
