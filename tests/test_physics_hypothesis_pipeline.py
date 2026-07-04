@@ -15,7 +15,13 @@ from moonstar_executor.models import PipelineSpec
 
 _PIPELINE_PATH = Path(__file__).parent.parent / "pipelines" / "physics_hypothesis.yaml"
 
-_WAVE_1_NAMES = ["conservation_check", "qm_calculation", "reference_lookup", "theory_critic"]
+_WAVE_1_NAMES = [
+    "conservation_check",
+    "qm_calculation",
+    "reference_lookup",
+    "dimension_check",
+    "theory_critic",
+]
 
 
 def _load_spec_with_placeholders_filled() -> PipelineSpec:
@@ -35,6 +41,7 @@ def test_pipeline_loads():
         "conservation_check",
         "qm_calculation",
         "reference_lookup",
+        "dimension_check",
         "theory_critic",
         "devils_advocate",
         "synthesizer",
@@ -66,4 +73,5 @@ def test_wave_1_transform_types_match_registered_entry_points():
     assert by_name["conservation_check"].type == "ConservationLawCheckTransform"
     assert by_name["qm_calculation"].type == "QMCalculationTransform"
     assert by_name["reference_lookup"].type == "ReferenceDataLookupTransform"
+    assert by_name["dimension_check"].type == "DimensionConsistencyTransform"
     assert by_name["theory_critic"].type == "LlmTransform"

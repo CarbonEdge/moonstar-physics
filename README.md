@@ -29,6 +29,7 @@ the worker runs in.
 | `ConservationLawCheckTransform` | Charge, baryon number, per-flavor lepton number (exact, via sympy.Rational), and a rest-mass-energy threshold check |
 | `QMCalculationTransform` | Closed-form energy-level/uncertainty calculations for infinite well, harmonic oscillator, hydrogen-like levels |
 | `ReferenceDataLookupTransform` | Looks up particle properties from the bundled `data/particles.json` |
+| `DimensionConsistencyTransform` | Checks fiber-bundle total-space dimensions and Spin(n) spinor representation dimensions against closed-form formulas |
 
 ## Usage
 
@@ -46,8 +47,12 @@ python -m pytest tests/ -q
 ## Scope
 
 v1 covers: charge/baryon/lepton-flavor conservation, four closed-form QM
-systems, and a curated ~16-particle reference dataset. Out of scope (see
-the design spec at `../docs/superpowers/specs/2026-07-02-moonstar-physics-design.md`
-in the Moonstar-Workbench root): QuTiP-based multi-particle/entanglement
-systems, live external data, Studio UI wiring, and
-Standard-Model-suppression-vs-hard-violation classification.
+systems, a curated ~16-particle reference dataset, and dimension-consistency
+checks for fiber-bundle and Spin(n) spinor-representation claims (see
+`../docs/superpowers/specs/2026-07-04-physics-dimension-consistency-design.md`
+in the Moonstar-Workbench root). Out of scope (see the original design spec
+at `../docs/superpowers/specs/2026-07-02-moonstar-physics-design.md`):
+QuTiP-based multi-particle/entanglement systems, live external data, Studio
+UI wiring, Standard-Model-suppression-vs-hard-violation classification,
+gauge-anomaly-cancellation arithmetic, and any general Lie-theory or
+proof-checking engine.

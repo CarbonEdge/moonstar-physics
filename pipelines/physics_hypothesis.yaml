@@ -32,7 +32,18 @@ transforms:
             "n": null,
             "omega_rad_s": null,
             "delta_x_m": null
-          }
+          },
+          "dimension_claims": [
+            {
+              "object": "<free text label for the geometric/algebraic object, e.g. 'observerse U'>",
+              "claim_type": "fiber_bundle | spinor_representation",
+              "base_dimension": null,
+              "fiber_kind": "vector | symmetric_bilinear_form | antisymmetric_bilinear_form | spinor | null",
+              "fiber_base_dimension": null,
+              "n": null,
+              "claimed_dimension": null
+            }
+          ]
         }
 
         Rules:
@@ -44,6 +55,14 @@ transforms:
           and final_state as empty lists.
         - If the hypothesis isn't about a solvable bound-state system, leave
           system_params.type as null.
+        - Only populate dimension_claims if the hypothesis explicitly states a
+          dimension for a fiber-bundle construction (base + fiber, where
+          fiber_kind is one of: vector, symmetric_bilinear_form,
+          antisymmetric_bilinear_form, spinor) or a Spin(n) spinor
+          representation. Use "base_dimension"/"fiber_kind"/
+          "fiber_base_dimension" for fiber_bundle claims, and "n" for
+          spinor_representation claims. Leave dimension_claims as an empty
+          list otherwise — do not force-fit unrelated claims into this schema.
 
   # Wave 1 — all four take `input: Extractor`, run in parallel once it completes
   - name: conservation_check
@@ -56,6 +75,10 @@ transforms:
 
   - name: reference_lookup
     type: ReferenceDataLookupTransform
+    input: Extractor
+
+  - name: dimension_check
+    type: DimensionConsistencyTransform
     input: Extractor
 
   - name: theory_critic
@@ -77,14 +100,16 @@ transforms:
 
   - name: devils_advocate
     type: LlmTransform
-    input: [conservation_check, qm_calculation, reference_lookup, theory_critic]
+    input: [conservation_check, qm_calculation, reference_lookup, dimension_check, theory_critic]
     config:
       model: "{{MODEL_CRITIC}}"
       max_tokens: 1200
       system: |
-        You receive four wave-1 outputs on a physics hypothesis: a
-        conservation-law check, a QM calculation, a reference-data lookup,
-        and a theory critic's assessment. Challenge the emerging consensus:
+        You receive five wave-1 outputs on a physics hypothesis: a
+        conservation-law check, a QM calculation, a reference-data lookup, a
+        dimension-consistency check (verifies fiber-bundle and spinor
+        representation dimension claims against known formulas), and a
+        theory critic's assessment. Challenge the emerging consensus:
 
         1. Do the deterministic checks (conservation_check, qm_calculation)
            agree with the theory critic's take? If not, say so explicitly —
@@ -99,7 +124,7 @@ transforms:
 
   - name: synthesizer
     type: LlmTransform
-    input: [conservation_check, qm_calculation, reference_lookup, theory_critic, devils_advocate]
+    input: [conservation_check, qm_calculation, reference_lookup, dimension_check, theory_critic, devils_advocate]
     config:
       model: "{{MODEL_DECISION_MAKER}}"
       max_tokens: 1200
@@ -107,8 +132,8 @@ transforms:
         You are producing the final answer for someone who asked whether a
         quantum-physics hypothesis makes sense. You receive: a
         conservation-law check verdict, a QM calculation verdict, a
-        reference-data lookup, a theory critic's assessment, and a devil's
-        advocate challenge.
+        reference-data lookup, a dimension-consistency check verdict, a
+        theory critic's assessment, and a devil's advocate challenge.
 
         Write a conversational explanation (not just a verdict): what the
         hypothesis claims, what the deterministic checks found (be specific
