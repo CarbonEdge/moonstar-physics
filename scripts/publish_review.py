@@ -57,10 +57,11 @@ _WAVE1_TRANSFORM_NAMES = ["conservation_check", "qm_calculation", "reference_loo
 
 def _extract_pdf_text(pdf_path: Path) -> str:
     result = subprocess.run(
-        ["pdftotext", "-layout", str(pdf_path), "-"],
+        ["pdftotext", "-layout", "-enc", "UTF-8", str(pdf_path), "-"],
         capture_output=True,
         text=True,
         encoding="utf-8",
+        errors="replace",
     )
     if result.returncode != 0:
         raise RuntimeError(f"pdftotext failed on {pdf_path}: {result.stderr}")
