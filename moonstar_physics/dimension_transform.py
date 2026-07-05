@@ -63,6 +63,8 @@ def _check_fiber_bundle(entry: dict[str, Any]) -> dict[str, Any] | None:
 
     if base_dimension is None or fiber_base_dimension is None or claimed_dimension is None:
         return None
+    if not isinstance(fiber_kind, str):
+        return None
     formula = _FIBER_KINDS.get(fiber_kind)
     if formula is None:
         return None
@@ -130,7 +132,10 @@ async def DimensionConsistencyTransform(
     for entry in claims:
         if not isinstance(entry, dict):
             continue
-        checker = _CHECKERS.get(entry.get("claim_type"))
+        claim_type = entry.get("claim_type")
+        if not isinstance(claim_type, str):
+            continue
+        checker = _CHECKERS.get(claim_type)
         if checker is None:
             continue
         result = checker(entry)

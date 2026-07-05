@@ -180,6 +180,35 @@ async def test_huge_n_does_not_hang_or_crash(ctx):
     assert result["verdict"] == "not_applicable"
 
 
+async def test_unhashable_claim_type_is_skipped_not_crashed(ctx):
+    """A malformed claim_type (e.g. a list, from a broken Extractor JSON) must
+    not crash dict.get() with an unhashable-type TypeError."""
+    payload = {
+        "dimension_claims": [
+            {"object": "bad claim_type", "claim_type": ["fiber_bundle"], "claimed_dimension": 14}
+        ]
+    }
+    result = await DimensionConsistencyTransform(_extractor_input(payload), {}, ctx)
+    assert result["verdict"] == "not_applicable"
+
+
+async def test_unhashable_fiber_kind_is_skipped_not_crashed(ctx):
+    payload = {
+        "dimension_claims": [
+            {
+                "object": "bad fiber_kind",
+                "claim_type": "fiber_bundle",
+                "base_dimension": 4,
+                "fiber_kind": ["symmetric_bilinear_form"],
+                "fiber_base_dimension": 4,
+                "claimed_dimension": 14,
+            }
+        ]
+    }
+    result = await DimensionConsistencyTransform(_extractor_input(payload), {}, ctx)
+    assert result["verdict"] == "not_applicable"
+
+
 async def test_vector_and_antisymmetric_fiber_kinds(ctx):
     """Sanity-check the two fiber_kind formulas not covered by the GU example."""
     payload = {
