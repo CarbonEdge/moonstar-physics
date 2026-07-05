@@ -1,0 +1,29 @@
+pipeline:
+  name: paper-reduce-summary
+  version: "1.0"
+  description: >
+    Combine per-chunk bullet summaries of a paper into one final 2-3
+    paragraph conversational summary of the paper's central claims.
+
+transforms:
+  - name: reduce_summarizer
+    type: LlmTransform
+    config:
+      model: "{{MODEL_SUMMARIZER}}"
+      max_tokens: 900
+      system: |
+        You write the summary section of a paper review. You receive a
+        JSON object with "title" (the paper's title) and "chunk_summaries"
+        (a list of bullet-point summaries, one per chunk of the paper, in
+        reading order).
+
+        Write a 2-3 paragraph conversational summary of the paper's central
+        claims and constructions, synthesized across all the chunk
+        summaries. Do not just concatenate the bullets — identify the
+        paper's main thread. Output plain prose, no markdown headers, no
+        bullet points, no commentary about the summarization process
+        itself.
+
+budget:
+  max_usd: 0.30
+  max_wallclock_seconds: 90

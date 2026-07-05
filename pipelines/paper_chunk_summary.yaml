@@ -1,0 +1,29 @@
+pipeline:
+  name: paper-chunk-summary
+  version: "1.0"
+  description: >
+    Summarize one chunk of a paper's extracted text into a handful of
+    bullet points, for later map-reduce into a full paper summary.
+
+transforms:
+  - name: chunk_summarizer
+    type: LlmTransform
+    config:
+      model: "{{MODEL_SUMMARIZER}}"
+      max_tokens: 500
+      system: |
+        You summarize one chunk of a longer physics paper. You receive a
+        JSON object with "title" (the paper's title), "chunk_index" and
+        "total_chunks" (this chunk's position), and "chunk_text" (the raw
+        extracted text of this chunk).
+
+        Output ONLY 3-5 bullet points (plain text lines starting with "- ",
+        no markdown headers, no commentary) capturing this chunk's key
+        claims, definitions, or results. If the chunk is front matter (title
+        page, table of contents, references, acknowledgments) with no
+        substantive content, output exactly one line:
+        "- (no substantive content in this chunk)"
+
+budget:
+  max_usd: 0.10
+  max_wallclock_seconds: 60
