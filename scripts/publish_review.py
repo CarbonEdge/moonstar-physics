@@ -79,14 +79,31 @@ async def _summarize_paper(
     for i, chunk in enumerate(chunks, start=1):
         print(f"Summarizing chunk {i}/{len(chunks)} ...")
         chunk_input = {"title": title, "chunk_index": i, "total_chunks": len(chunks), "chunk_text": chunk}
-        status = await submit_and_wait(client, gateway_url, token, chunk_yaml, chunk_input)
-        if status.get("status") != "completed":
-            print(f"Chunk {i}/{len(chunks)} summary failed (status={status.get('status')}), retrying once ...")
+
+        # First attempt
+        status = None
+        first_error = None
+        try:
             status = await submit_and_wait(client, gateway_url, token, chunk_yaml, chunk_input)
-        if status.get("status") != "completed":
-            raise PipelineRunError(
-                f"chunk {i}/{len(chunks)} summary failed twice: status={status.get('status')}"
-            )
+        except (httpx.HTTPError, PipelineRunError) as exc:
+            first_error = exc
+
+        # Check if first attempt failed (by exception or non-completed status)
+        if first_error is not None or (status is not None and status.get("status") != "completed"):
+            print(f"Chunk {i}/{len(chunks)} summary failed, retrying once ...")
+            # Retry attempt
+            status = None
+            try:
+                status = await submit_and_wait(client, gateway_url, token, chunk_yaml, chunk_input)
+            except (httpx.HTTPError, PipelineRunError) as exc:
+                raise PipelineRunError(f"chunk {i}/{len(chunks)} summary failed twice: {exc}")
+
+            # Check if retry succeeded
+            if status.get("status") != "completed":
+                raise PipelineRunError(
+                    f"chunk {i}/{len(chunks)} summary failed twice: status={status.get('status')}"
+                )
+
         artifact = find_artifact(status, "chunk_summarizer") or {}
         chunk_summaries.append(artifact.get("response", ""))
 
