@@ -1,0 +1,42 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>{{ review.title }} — Moonstar Physics Review</title>
+</head>
+<body>
+<p><a href="../index.html">&larr; All reviews</a></p>
+<h1>{{ review.title }}</h1>
+<p><strong>Authors:</strong> {{ review.authors | join(", ") }}</p>
+{% if review.draft_date %}<p><strong>Draft date:</strong> {{ review.draft_date }}</p>{% endif %}
+<p><strong>PDF:</strong> <a href="{{ pdf_href }}">{{ review.slug }}.pdf</a></p>
+{% if review.source_url %}<p><strong>Source:</strong> <a href="{{ review.source_url }}">{{ review.source_url }}</a></p>{% endif %}
+
+<h2>Summary</h2>
+<p>{{ review.summary }}</p>
+
+<h2>Tested Hypotheses</h2>
+<table>
+<tr><th>#</th><th>Hypothesis</th><th>Verdict</th><th>Details</th></tr>
+{% for hr in hypotheses %}
+<tr><td>{{ loop.index }}</td><td>{{ hr.hypothesis }}</td><td>{{ hr.verdict }}</td><td><a href="#hypothesis-{{ loop.index }}">full writeup</a></td></tr>
+{% endfor %}
+</table>
+
+<h2>Evidence</h2>
+{% for hr in hypotheses %}
+<h3 id="hypothesis-{{ loop.index }}">Hypothesis {{ loop.index }}</h3>
+<p><strong>Claim:</strong> {{ hr.hypothesis }}</p>
+<p><strong>Verdict:</strong> {{ hr.verdict }}</p>
+<p>{{ hr.writeup }}</p>
+{% if hr.wave1_results %}
+<ul>
+{% for name in hr.wave1_results.keys() | sort %}
+<li><code>{{ name }}</code>: {{ hr.wave1_results[name].get("verdict") }}</li>
+{% endfor %}
+</ul>
+{% endif %}
+{% if hr.run_href %}<p><a href="{{ hr.run_href }}">Raw run data</a></p>{% endif %}
+{% endfor %}
+</body>
+</html>
