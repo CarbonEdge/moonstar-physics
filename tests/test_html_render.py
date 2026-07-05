@@ -70,3 +70,18 @@ def test_render_index_html_lists_review_with_link():
     html = render_index_html([_review()], _env())
     assert "Geometric Unity" in html
     assert 'href="reviews/geometric-unity.html"' in html
+
+
+def test_render_review_html_converts_markdown_prose_to_real_html():
+    review = _review()
+    review.summary = "First paragraph with **bold** text.\n\nSecond paragraph."
+    review.hypothesis_results[0].writeup = "Hypothesis with **emphasized** word.\n\nAnother para."
+    html = render_review_html(review, _env())
+    assert "<strong>bold</strong>" in html
+    assert "<p>First paragraph with <strong>bold</strong> text.</p>" in html
+    assert "<p>Second paragraph.</p>" in html
+    assert "<strong>emphasized</strong>" in html
+    assert "<p>Hypothesis with <strong>emphasized</strong> word.</p>" in html
+    assert "<p>Another para.</p>" in html
+    assert "**bold**" not in html
+    assert "**emphasized**" not in html

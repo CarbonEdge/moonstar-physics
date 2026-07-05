@@ -13,7 +13,7 @@
 {% if review.source_url %}<p><strong>Source:</strong> <a href="{{ review.source_url }}">{{ review.source_url }}</a></p>{% endif %}
 
 <h2>Summary</h2>
-<p>{{ review.summary }}</p>
+{{ summary_html }}
 
 <h2>Tested Hypotheses</h2>
 <table>
@@ -28,7 +28,7 @@
 <h3 id="hypothesis-{{ loop.index }}">Hypothesis {{ loop.index }}</h3>
 <p><strong>Claim:</strong> {{ hr.hypothesis }}</p>
 <p><strong>Verdict:</strong> {{ hr.verdict }}</p>
-<p>{{ hr.writeup }}</p>
+{{ hr.writeup }}
 {% if hr.wave1_results %}
 <ul>
 {% for name in hr.wave1_results.keys() | sort %}
