@@ -1,0 +1,10 @@
+title: "Geometric Unity"
+authors: ["Eric Weinstein"]
+draft_date: "2021-04-01"
+pdf: "papers/pdfs/geometric-unity.pdf"
+source_url: null
+hypotheses:
+  - "In Eric Weinstein's Geometric Unity, the observerse (Chimeric bundle) is formed as a bundle over 4-dimensional spacetime X whose fiber at each point is the space of symmetric bilinear forms (metrics) on the 4-dimensional tangent space. Does this construction give the observerse a total dimension of 14?"
+  - "The spinor bundle S(U) for Spin(14) has complex dimension 128."
+  - "The Weyl half-spinor representation of Spin(14) has complex dimension 64."
+  - "The Standard Model gauge group SU(3) x SU(2) x U(1) emerges from a 10-dimensional representation of Spin(6) x Spin(4) inside Spin(6,4), via the isomorphisms SU(4)=Spin(6) and SU(2)xSU(2)=Spin(4)."

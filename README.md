@@ -38,6 +38,45 @@ export MOONSTAR_AUTH_TOKEN=<token>  # from `python -m moonstar_gateway.cli seed-
 python scripts/test_hypothesis.py "could a muon decay into an electron and a photon?"
 ```
 
+## Paper Reviews
+
+Publishes AI-tested reviews of physics papers to a GitHub Pages site under
+`docs/` — each paper gets a curated hypothesis list run through
+`physics_hypothesis.yaml`, plus an LLM-generated summary of the paper
+itself (map-reduce over the extracted PDF text).
+
+**Prerequisites:** `pdftotext` (poppler-utils) on `PATH`, required. `pandoc`
+on `PATH`, optional — enables `review.pdf` export for upload to ScienceOpen;
+skipped with a warning if absent.
+
+**Define a paper** — `papers/<slug>.yaml`:
+```yaml
+title: "..."
+authors: ["..."]
+draft_date: "YYYY-MM-DD"   # optional
+pdf: "papers/pdfs/<slug>.pdf"
+source_url: null            # optional
+hypotheses:
+  - "A specific, testable claim from the paper."
+```
+
+**Publish one paper's review:**
+```bash
+export MOONSTAR_AUTH_TOKEN=<token>  # from `python -m moonstar_gateway.cli seed-user`
+python scripts/publish_review.py geometric-unity
+```
+Writes `reviews/geometric-unity/review.md` (+ `review.pdf` if `pandoc` is
+installed) and `reviews/geometric-unity/review_data.json`.
+
+**Rebuild the site** (after publishing any paper(s)):
+```bash
+python scripts/build_site.py
+```
+Renders `docs/index.html` and `docs/reviews/<slug>.html` from every
+`reviews/*/review_data.json`. Commit and push `docs/` to publish — GitHub
+Pages is configured to serve `main` / `/docs`.
+```
+
 ## Testing
 
 ```bash
