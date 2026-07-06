@@ -15,6 +15,7 @@ from jinja2 import Environment
 from markupsafe import Markup, escape
 
 from moonstar_physics.paper_review.review_model import ReviewData
+from moonstar_physics.paper_review.scienceopen import Citation, format_citation, render_abstract, render_methodology
 
 _BOLD_RE = re.compile(r"\*\*(.+?)\*\*")
 
@@ -41,13 +42,21 @@ def _prose_to_html(text: str) -> Markup:
     return Markup("\n".join(rendered))
 
 
+def _reference_html(citation: Citation) -> Markup:
+    escaped_text = str(escape(citation.text))
+    if citation.url:
+        escaped_url = str(escape(citation.url))
+        return Markup(f'{escaped_text} <a href="{escaped_url}">{escaped_url}</a>')
+    return Markup(escaped_text)
+
+
 def _run_href(slug: str, run_path: str | None) -> str | None:
     if not run_path:
         return None
     return f"{slug}/runs/{Path(run_path).name}"
 
 
-def render_review_html(review: ReviewData, env: Environment) -> str:
+def render_review_html(review: ReviewData, env: Environment, models: dict[str, str]) -> str:
     template = env.get_template("review.html.j2")
     hypotheses = [
         {
@@ -62,7 +71,10 @@ def render_review_html(review: ReviewData, env: Environment) -> str:
     return template.render(
         review=review,
         hypotheses=hypotheses,
+        abstract_html=_prose_to_html(render_abstract(review)),
         summary_html=_prose_to_html(review.summary),
+        methodology_html=_prose_to_html(render_methodology(models)),
+        reference_html=_reference_html(format_citation(review)),
         pdf_href=f"../papers/{review.slug}.pdf",
     )
 

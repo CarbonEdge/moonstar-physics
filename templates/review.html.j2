@@ -12,8 +12,14 @@
 <p><strong>PDF:</strong> <a href="{{ pdf_href }}">{{ review.slug }}.pdf</a></p>
 {% if review.source_url %}<p><strong>Source:</strong> <a href="{{ review.source_url }}">{{ review.source_url }}</a></p>{% endif %}
 
-<h2>Summary</h2>
+<h2>Abstract</h2>
+{{ abstract_html }}
+
+<h2>Paper Summary</h2>
 {{ summary_html }}
+
+<h2>Methodology</h2>
+{{ methodology_html }}
 
 <h2>Tested Hypotheses</h2>
 <table>
@@ -38,5 +44,10 @@
 {% endif %}
 {% if hr.run_href %}<p><a href="{{ hr.run_href }}">Raw run data</a></p>{% endif %}
 {% endfor %}
+
+<h2>References</h2>
+<ol>
+<li>{{ reference_html }}</li>
+</ol>
 </body>
 </html>
