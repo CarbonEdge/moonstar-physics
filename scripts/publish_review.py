@@ -2,8 +2,10 @@
 
 Runs the paper's PDF through map-reduce summarization, tests every curated
 hypothesis in papers/<slug>.yaml against the physics_hypothesis pipeline,
-and writes reviews/<slug>/review.md (+ review.pdf via pandoc, if installed)
-and reviews/<slug>/review_data.json (consumed by scripts/build_site.py).
+and writes reviews/<slug>/review.md (+ review.pdf via pandoc, if installed),
+reviews/<slug>/review_data.json (consumed by scripts/build_site.py), and
+reviews/<slug>/scienceopen_metadata.json (a copy-paste sidecar for manually
+submitting the review to ScienceOpen).
 
 Usage:
     MOONSTAR_AUTH_TOKEN=<token> python scripts/publish_review.py geometric-unity
@@ -12,8 +14,12 @@ Env vars:
     MOONSTAR_GATEWAY_URL   default http://localhost:8000
     MOONSTAR_AUTH_TOKEN    required — get one via `python -m moonstar_gateway.cli seed-user`
 
-Requires `pdftotext` (poppler-utils) on PATH. `pandoc` is optional — PDF
-export is skipped with a warning if it isn't installed.
+Requires `pdftotext` (poppler-utils) on PATH. `pandoc` + the `typst` PDF
+engine are optional — PDF export is skipped with a warning if either isn't
+installed (`scoop install pandoc typst` on Windows).
+
+Reads `scienceopen_author.json` (repo root) for the author/ORCID block in
+the metadata sidecar — fill in your real ORCID iD there before first use.
 """
 from __future__ import annotations
 
@@ -32,6 +38,7 @@ from moonstar_physics.paper_review.chunking import ChunkingError, chunk_text
 from moonstar_physics.paper_review.markdown_render import render_review_markdown
 from moonstar_physics.paper_review.paper_spec import load_paper_spec
 from moonstar_physics.paper_review.review_model import HypothesisResult, ReviewData
+from moonstar_physics.paper_review.scienceopen import build_scienceopen_metadata
 
 sys.path.insert(0, str(Path(__file__).parent))
 from _pipeline_client import (  # noqa: E402
@@ -52,6 +59,7 @@ _PIPELINES_DIR = _ROOT_DIR / "pipelines"
 _PAPERS_DIR = _ROOT_DIR / "papers"
 _REVIEWS_DIR = _ROOT_DIR / "reviews"
 _MODELS_PATH = _PIPELINES_DIR / "models.json"
+_AUTHOR_PATH = _ROOT_DIR / "scienceopen_author.json"
 
 _WAVE1_TRANSFORM_NAMES = ["conservation_check", "qm_calculation", "reference_lookup", "dimension_check"]
 
@@ -195,15 +203,30 @@ async def _publish(slug: str) -> int:
         hypothesis_results=hypothesis_results,
     )
 
+    models = json.loads(_MODELS_PATH.read_text(encoding="utf-8"))
+    author = json.loads(_AUTHOR_PATH.read_text(encoding="utf-8"))
+
     (review_dir / "review_data.json").write_text(
         json.dumps(review.to_dict(), indent=2, ensure_ascii=False), encoding="utf-8"
     )
-    (review_dir / "review.md").write_text(render_review_markdown(review), encoding="utf-8")
+    (review_dir / "review.md").write_text(render_review_markdown(review, models), encoding="utf-8")
     print(f"Wrote {review_dir / 'review.md'}")
+
+    metadata = build_scienceopen_metadata(review, author, models)
+    (review_dir / "scienceopen_metadata.json").write_text(
+        json.dumps(metadata, indent=2, ensure_ascii=False), encoding="utf-8"
+    )
+    print(f"Wrote {review_dir / 'scienceopen_metadata.json'}")
 
     if shutil.which("pandoc"):
         pandoc_result = subprocess.run(
-            ["pandoc", str(review_dir / "review.md"), "-o", str(review_dir / "review.pdf")],
+            [
+                "pandoc",
+                str(review_dir / "review.md"),
+                "--pdf-engine=typst",
+                "-o",
+                str(review_dir / "review.pdf"),
+            ],
             capture_output=True,
             text=True,
         )
