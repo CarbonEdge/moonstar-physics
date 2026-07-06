@@ -20,6 +20,7 @@ _ROOT_DIR = Path(__file__).parent.parent
 _REVIEWS_DIR = _ROOT_DIR / "reviews"
 _DOCS_DIR = _ROOT_DIR / "docs"
 _TEMPLATES_DIR = _ROOT_DIR / "templates"
+_MODELS_PATH = _ROOT_DIR / "pipelines" / "models.json"
 
 
 def _load_reviews() -> list[ReviewData]:
@@ -51,6 +52,7 @@ def build_site() -> None:
         print("No reviews found under reviews/*/review_data.json — nothing to build.")
         return
 
+    models = json.loads(_MODELS_PATH.read_text(encoding="utf-8"))
     env = Environment(
         loader=FileSystemLoader(str(_TEMPLATES_DIR)),
         autoescape=select_autoescape(["html", "j2"]),
@@ -59,7 +61,7 @@ def build_site() -> None:
     (_DOCS_DIR / "reviews").mkdir(parents=True, exist_ok=True)
     for review in reviews:
         _copy_assets(review)
-        html = render_review_html(review, env)
+        html = render_review_html(review, env, models)
         (_DOCS_DIR / "reviews" / f"{review.slug}.html").write_text(html, encoding="utf-8")
         print(f"Built docs/reviews/{review.slug}.html")
 
