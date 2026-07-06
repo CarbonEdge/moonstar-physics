@@ -6,6 +6,7 @@ for the HTML site layer in html_render.py).
 from __future__ import annotations
 
 from moonstar_physics.paper_review.review_model import ReviewData
+from moonstar_physics.paper_review.scienceopen import render_abstract, render_methodology, render_references
 
 # review.md always lives at reviews/<slug>/review.md — two directories
 # below the repo root — so repo-root-relative paths (like pdf_path) need
@@ -13,7 +14,7 @@ from moonstar_physics.paper_review.review_model import ReviewData
 _ROOT_RELATIVE_PREFIX = "../../"
 
 
-def render_review_markdown(review: ReviewData) -> str:
+def render_review_markdown(review: ReviewData, models: dict[str, str]) -> str:
     lines: list[str] = []
     lines.append(f"# {review.title}")
     lines.append("")
@@ -26,9 +27,19 @@ def render_review_markdown(review: ReviewData) -> str:
         lines.append(f"**Source:** [{review.source_url}]({review.source_url})  ")
     lines.append("")
 
-    lines.append("## Summary")
+    lines.append("## Abstract")
+    lines.append("")
+    lines.append(render_abstract(review))
+    lines.append("")
+
+    lines.append("## Paper Summary")
     lines.append("")
     lines.append(review.summary)
+    lines.append("")
+
+    lines.append("## Methodology")
+    lines.append("")
+    lines.append(render_methodology(models))
     lines.append("")
 
     lines.append("## Tested Hypotheses")
@@ -61,5 +72,7 @@ def render_review_markdown(review: ReviewData) -> str:
         if hr.run_path:
             lines.append(f"[Raw run data]({hr.run_path})")
             lines.append("")
+
+    lines.append(render_references(review))
 
     return "\n".join(lines)
