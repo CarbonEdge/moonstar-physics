@@ -46,10 +46,10 @@ Publishes AI-tested reviews of physics papers to a GitHub Pages site under
 itself (map-reduce over the extracted PDF text).
 
 **Prerequisites:** `pdftotext` (poppler-utils) on `PATH`, required. `pandoc`
-+ the `typst` PDF engine on `PATH`, optional (`scoop install pandoc typst`
-on Windows) — enable `review.pdf` export; skipped with a warning if either
-is absent. Before your first real submission, fill in your ORCID iD in
-`scienceopen_author.json` (repo root, committed — an ORCID is a public
+plus the `typst` PDF engine on `PATH`, optional (`scoop install pandoc
+typst` on Windows) — enable `review.pdf` export; skipped with a warning if
+either is absent. Before your first real submission, fill in your ORCID iD
+in `scienceopen_author.json` (repo root, committed — an ORCID is a public
 identifier, not a secret).
 
 **Define a paper** — `papers/<slug>.yaml`:
