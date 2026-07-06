@@ -39,6 +39,7 @@ from _pipeline_client import (  # noqa: E402
     extract_verdict,
     find_artifact,
     render_pipeline_yaml,
+    strip_leading_verdict_line,
     submit_and_wait,
 )
 
@@ -147,12 +148,12 @@ async def _test_hypothesis(
         )
 
     synthesizer = find_artifact(status, "synthesizer") or {}
-    writeup = synthesizer.get("response", "")
+    raw_writeup = synthesizer.get("response", "")
     wave1_results = {name: (find_artifact(status, name) or {}) for name in _WAVE1_TRANSFORM_NAMES}
     return HypothesisResult(
         hypothesis=hypothesis,
-        verdict=extract_verdict(writeup),
-        writeup=writeup,
+        verdict=extract_verdict(raw_writeup),
+        writeup=strip_leading_verdict_line(raw_writeup),
         wave1_results=wave1_results,
         run_path=run_path,
     )

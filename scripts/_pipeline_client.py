@@ -37,16 +37,38 @@ def find_artifact(status_data: dict[str, Any], transform_name: str) -> dict[str,
 
 
 def extract_verdict(writeup: str) -> str:
-    """Pull the trailing one-line verdict off a synthesizer writeup.
+    """Pull the one-line verdict off a synthesizer writeup.
 
-    Takes the last non-empty line and strips markdown emphasis markers,
-    e.g. "**INCONCLUSIVE**" -> "INCONCLUSIVE". Returns "UNKNOWN" if the
+    The synthesizer is prompted to lead with a "VERDICT: <word>" line so the
+    verdict survives even if the explanation that follows gets truncated by
+    a token-budget cutoff. Falls back to the last non-empty line (stripped
+    of markdown emphasis markers, e.g. "**INCONCLUSIVE**" -> "INCONCLUSIVE")
+    for older-style writeups without that prefix. Returns "UNKNOWN" if the
     writeup has no non-empty lines.
     """
     lines = [line.strip() for line in writeup.strip().splitlines() if line.strip()]
     if not lines:
         return "UNKNOWN"
+    for line in lines:
+        stripped = line.strip("*_ ")
+        if stripped.upper().startswith("VERDICT:"):
+            return stripped.split(":", 1)[1].strip().strip("*_ ")
     return lines[-1].strip("*_ ")
+
+
+def strip_leading_verdict_line(writeup: str) -> str:
+    """Drop a leading "VERDICT: <word>" line (and the blank line after it)
+    from a synthesizer writeup before display — extract_verdict() already
+    pulled the verdict out for the "**Verdict:** X" heading, so repeating
+    the raw prefix line in the writeup body is redundant. Leaves writeups
+    without that prefix (e.g. the old last-line style) unchanged.
+    """
+    lines = writeup.strip("\n").splitlines()
+    if lines and lines[0].strip("*_ ").upper().startswith("VERDICT:"):
+        lines = lines[1:]
+        while lines and not lines[0].strip():
+            lines = lines[1:]
+    return "\n".join(lines)
 
 
 async def submit_and_wait(

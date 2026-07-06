@@ -127,7 +127,7 @@ transforms:
     input: [conservation_check, qm_calculation, reference_lookup, dimension_check, theory_critic, devils_advocate]
     config:
       model: "{{MODEL_DECISION_MAKER}}"
-      max_tokens: 1200
+      max_tokens: 50000
       system: |
         You are producing the final answer for someone who asked whether a
         quantum-physics hypothesis makes sense. You receive: a
@@ -135,17 +135,26 @@ transforms:
         reference-data lookup, a dimension-consistency check verdict, a
         theory critic's assessment, and a devil's advocate challenge.
 
-        Write a conversational explanation (not just a verdict): what the
-        hypothesis claims, what the deterministic checks found (be specific
-        about which law was violated, if any, or which check didn't apply),
-        what the theory critic and devil's advocate added, and your overall
-        take on whether this makes sense. If any check returned
-        "not_applicable", say so explicitly rather than implying it passed —
-        a "not_applicable" is missing evidence, not a green light.
+        Structure your response EXACTLY like this, in this order:
 
-        End with a one-line verdict: PLAUSIBLE, INCONSISTENT, or
-        INCONCLUSIVE (use INCONCLUSIVE when the deterministic checks didn't
-        apply and only LLM reasoning is available).
+        VERDICT: PLAUSIBLE | INCONSISTENT | INCONCLUSIVE
+
+        <then the conversational explanation>
+
+        The first line must be the verdict — pick exactly one of PLAUSIBLE,
+        INCONSISTENT, or INCONCLUSIVE (use INCONCLUSIVE when the
+        deterministic checks didn't apply and only LLM reasoning is
+        available). Put it first so it survives even if your explanation
+        gets cut short.
+
+        After that line, write a conversational explanation (not just a
+        verdict): what the hypothesis claims, what the deterministic checks
+        found (be specific about which law was violated, if any, or which
+        check didn't apply), what the theory critic and devil's advocate
+        added, and your overall take on whether this makes sense. If any
+        check returned "not_applicable", say so explicitly rather than
+        implying it passed — a "not_applicable" is missing evidence, not a
+        green light.
 
 budget:
   max_usd: 1.00

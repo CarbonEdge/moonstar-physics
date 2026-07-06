@@ -52,3 +52,23 @@ def test_extract_verdict_handles_plain_last_line():
 
 def test_extract_verdict_returns_unknown_for_empty_writeup():
     assert client.extract_verdict("   \n  \n") == "UNKNOWN"
+
+
+def test_extract_verdict_prefers_leading_verdict_line():
+    writeup = "VERDICT: INCONSISTENT\n\nHere's a long conversational explanation that"
+    assert client.extract_verdict(writeup) == "INCONSISTENT"
+
+
+def test_extract_verdict_leading_verdict_line_survives_truncation():
+    writeup = "VERDICT: INCONCLUSIVE\n\nAlright, let's walk through this step by step, just as"
+    assert client.extract_verdict(writeup) == "INCONCLUSIVE"
+
+
+def test_strip_leading_verdict_line_removes_prefix_and_blank_line():
+    writeup = "VERDICT: PLAUSIBLE\n\nHere's the explanation."
+    assert client.strip_leading_verdict_line(writeup) == "Here's the explanation."
+
+
+def test_strip_leading_verdict_line_leaves_writeup_without_prefix_unchanged():
+    writeup = "Some text.\nCONSISTENT"
+    assert client.strip_leading_verdict_line(writeup) == writeup
