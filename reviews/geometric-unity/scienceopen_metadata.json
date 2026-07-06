@@ -1,0 +1,21 @@
+{
+  "submission_title": "AI-Assisted Hypothesis Verification of Geometric Unity: A Moonstar Physics Review",
+  "abstract": "An AI-assisted hypothesis-verification review of Geometric Unity by Eric Weinstein, testing 4 curated claims via the Moonstar physics-hypothesis pipeline (deterministic conservation-law/QM/dimension checks cross-examined by an LLM theory critic and devil's advocate). Verdicts: 1 error, 3 inconclusive.",
+  "authors": [
+    {
+      "name": "Melvin Chotu",
+      "orcid": "0009-0007-1617-4856"
+    }
+  ],
+  "keywords": [
+    "physics",
+    "AI-assisted review",
+    "hypothesis testing",
+    "Moonstar"
+  ],
+  "references": [
+    "Eric Weinstein (2021). Geometric Unity."
+  ],
+  "license_note": "ScienceOpen applies CC BY 4.0 and a CrossRef DOI automatically upon acceptance — no action needed here.",
+  "pdf_path": "reviews/geometric-unity/review.pdf"
+}

@@ -46,8 +46,11 @@ Publishes AI-tested reviews of physics papers to a GitHub Pages site under
 itself (map-reduce over the extracted PDF text).
 
 **Prerequisites:** `pdftotext` (poppler-utils) on `PATH`, required. `pandoc`
-on `PATH`, optional — enables `review.pdf` export for upload to ScienceOpen;
-skipped with a warning if absent.
++ the `typst` PDF engine on `PATH`, optional (`scoop install pandoc typst`
+on Windows) — enable `review.pdf` export; skipped with a warning if either
+is absent. Before your first real submission, fill in your ORCID iD in
+`scienceopen_author.json` (repo root, committed — an ORCID is a public
+identifier, not a secret).
 
 **Define a paper** — `papers/<slug>.yaml`:
 ```yaml
@@ -65,8 +68,16 @@ hypotheses:
 export MOONSTAR_AUTH_TOKEN=<token>  # from `python -m moonstar_gateway.cli seed-user`
 python scripts/publish_review.py geometric-unity
 ```
-Writes `reviews/geometric-unity/review.md` (+ `review.pdf` if `pandoc` is
-installed) and `reviews/geometric-unity/review_data.json`.
+Writes `reviews/geometric-unity/review.md` (with Abstract, Paper Summary,
+Methodology, Tested Hypotheses, Evidence, and References sections),
+`reviews/geometric-unity/review.pdf` (if `pandoc`+`typst` are installed),
+`reviews/geometric-unity/review_data.json`, and
+`reviews/geometric-unity/scienceopen_metadata.json` — a copy-paste-ready
+submission title, abstract, author/ORCID block, and reference list for
+manually submitting the review through ScienceOpen's upload form at
+https://www.scienceopen.com/collection/5916e67c-0edf-472a-ad8e-6e205a4e080d.
+Submission itself stays a manual step — nothing here talks to ScienceOpen's
+API.
 
 **Rebuild the site** (after publishing any paper(s)):
 ```bash
