@@ -12,7 +12,7 @@ transforms:
     type: LlmTransform
     config:
       model: "{{MODEL_EXTRACTOR}}"
-      max_tokens: 700
+      max_tokens: 2000
       system: |
         You extract a physics hypothesis into structured JSON. Output ONLY
         the JSON object below, no markdown fences, no commentary.
