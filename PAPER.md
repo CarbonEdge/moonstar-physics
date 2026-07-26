@@ -149,13 +149,13 @@ We built and ran an AI-assisted hypothesis-verification pipeline against two rea
 
 ## References
 
-- Bai, Y. et al. (2022). *Constitutional AI: Harmlessness from AI Feedback.* Anthropic.
-- Du, Y., Li, S., Torralba, A., Tenenbaum, J. B., & Mordatch, I. (2023). *Improving Factuality and Reasoning in Language Models through Multiagent Debate.*
-- Liang, W. et al. (2024). *Can large language models provide useful feedback on research papers? A large-scale empirical analysis.*
-- Madaan, A. et al. (2023). *Self-Refine: Iterative Refinement with Self-Feedback.*
-- Weinstein, E. (2021). *Geometric Unity.*
-- Wolfram, S. (2020). *Finally We May Have a Path to the Fundamental Theory of Physics… and It's Beautiful.* https://writings.stephenwolfram.com/2020/04/finally-we-may-have-a-path-to-the-fundamental-theory-of-physics-and-its-beautiful/
-- Zheng, L. et al. (2023). *Judging LLM-as-a-Judge with MT-Bench and Chatbot Arena.*
+- Bai, Y. et al. (2022). *Constitutional AI: Harmlessness from AI Feedback.* Anthropic. [arXiv:2212.08073](https://arxiv.org/abs/2212.08073)
+- Du, Y., Li, S., Torralba, A., Tenenbaum, J. B., & Mordatch, I. (2023). *Improving Factuality and Reasoning in Language Models through Multiagent Debate.* [arXiv:2305.14325](https://arxiv.org/abs/2305.14325)
+- Liang, W. et al. (2023). *Can large language models provide useful feedback on research papers? A large-scale empirical analysis.* [arXiv:2310.01783](https://arxiv.org/abs/2310.01783)
+- Madaan, A. et al. (2023). *Self-Refine: Iterative Refinement with Self-Feedback.* [arXiv:2303.17651](https://arxiv.org/abs/2303.17651)
+- Weinstein, E. (2021). *Geometric Unity: Author's Working Draft, v 1.0.* [geometricunity.org](https://geometricunity.org/) — draft PDF: [geometricunity.nyc3.digitaloceanspaces.com](https://geometricunity.nyc3.digitaloceanspaces.com/Geometric_Unity-Draft-April-1st-2021.pdf)
+- Wolfram, S. (2020). *Finally We May Have a Path to the Fundamental Theory of Physics… and It's Beautiful.* [writings.stephenwolfram.com](https://writings.stephenwolfram.com/2020/04/finally-we-may-have-a-path-to-the-fundamental-theory-of-physics-and-its-beautiful/)
+- Zheng, L. et al. (2023). *Judging LLM-as-a-Judge with MT-Bench and Chatbot Arena.* [arXiv:2306.05685](https://arxiv.org/abs/2306.05685)
 
 ## Appendix: Data Availability
 
