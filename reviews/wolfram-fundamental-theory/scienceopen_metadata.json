@@ -1,0 +1,21 @@
+{
+  "submission_title": "AI-Assisted Hypothesis Verification of Finally We May Have a Path to the Fundamental Theory of Physics… and It's Beautiful: A Moonstar Physics Review",
+  "abstract": "An AI-assisted hypothesis-verification review of Finally We May Have a Path to the Fundamental Theory of Physics… and It's Beautiful by Stephen Wolfram, testing 5 curated claims via the Moonstar physics-hypothesis pipeline (deterministic conservation-law/QM/dimension checks cross-examined by an LLM theory critic and devil's advocate). Verdicts: 4 inconclusive, 1 inconsistent.",
+  "authors": [
+    {
+      "name": "Melvin Chotu",
+      "orcid": "0009-0007-1617-4856"
+    }
+  ],
+  "keywords": [
+    "physics",
+    "AI-assisted review",
+    "hypothesis testing",
+    "Moonstar"
+  ],
+  "references": [
+    "Stephen Wolfram (2020). Finally We May Have a Path to the Fundamental Theory of Physics… and It's Beautiful. https://writings.stephenwolfram.com/2020/04/finally-we-may-have-a-path-to-the-fundamental-theory-of-physics-and-its-beautiful/"
+  ],
+  "license_note": "ScienceOpen applies CC BY 4.0 and a CrossRef DOI automatically upon acceptance — no action needed here.",
+  "pdf_path": "reviews/wolfram-fundamental-theory/review.pdf"
+}

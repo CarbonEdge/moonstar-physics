@@ -1,0 +1,11 @@
+title: "Finally We May Have a Path to the Fundamental Theory of Physics… and It's Beautiful"
+authors: ["Stephen Wolfram"]
+draft_date: "2020-04-14"
+pdf: "papers/pdfs/wolfram-fundamental-theory.pdf"
+source_url: "https://writings.stephenwolfram.com/2020/04/finally-we-may-have-a-path-to-the-fundamental-theory-of-physics-and-its-beautiful/"
+hypotheses:
+  - "In Stephen Wolfram's hypergraph-rewriting model of physics, repeatedly applying the update rule {{x,y},{x,z}} -> {{x,z},{x,w},{y,w},{z,w}} to a small initial hypergraph produces an emergent space whose effective dimension, measured by counting hypergraph elements reached within graph-distance r, is approximately 2.7."
+  - "In Stephen Wolfram's hypergraph-rewriting model of physics, the rule {{x,y,z}} -> {{x,u,w},{y,v,u},{z,w,v}} produces a self-similar structure whose fractal (graph-growth) dimension equals log(3)/log(2), approximately 1.58 — the same as the fractal dimension of a Sierpinski gasket."
+  - "In Stephen Wolfram's model, assuming an elementary length of the hypergraph of about 10^-93 meters, the electron's radius would be about 10^-81 meters — far smaller than the current experimental upper bound of about 10^-22 meters on the electron's size, and consistent with the electron remaining a stable, effectively point-like particle at observable energy scales."
+  - "Stephen Wolfram's model predicts a class of extremely light, extremely weakly-interacting relic particles from the early universe, which he calls 'oligons,' as a candidate explanation for the dark matter observed gravitationally in and around galaxies."
+  - "Stephen Wolfram's model claims that general relativity and quantum mechanics are, at a deep level, the same phenomenon: general relativity arises from geodesic deviation and curvature in physical space (the hypergraph), while quantum mechanics arises from analogous geodesic deviation and curvature in 'branchial space' (the space of all possible updating histories of a multiway system)."
