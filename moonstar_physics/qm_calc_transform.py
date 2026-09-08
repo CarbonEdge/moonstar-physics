@@ -11,8 +11,7 @@ from __future__ import annotations
 import math
 from typing import Any
 
-from moonstar_core import SessionContext
-
+from ._compat import SessionContext
 from ._parsing import parse_extractor_output
 
 _HBAR = 1.054571817e-34  # J*s

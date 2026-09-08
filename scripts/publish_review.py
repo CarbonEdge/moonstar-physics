@@ -34,6 +34,7 @@ from pathlib import Path
 import httpx
 
 sys.path.insert(0, str(Path(__file__).parent.parent))
+from moonstar_physics import local_pipeline
 from moonstar_physics.paper_review.chunking import ChunkingError, chunk_text
 from moonstar_physics.paper_review.markdown_render import render_review_markdown
 from moonstar_physics.paper_review.paper_spec import load_paper_spec
@@ -78,9 +79,14 @@ def _extract_pdf_text(pdf_path: Path) -> str:
 
 
 async def _summarize_paper(
-    client: httpx.AsyncClient, gateway_url: str, token: str, title: str, text: str
+    client: httpx.AsyncClient,
+    gateway_url: str,
+    token: str,
+    title: str,
+    text: str,
+    words_per_chunk: int | None = None,
 ) -> str:
-    chunks = chunk_text(text)
+    chunks = chunk_text(text, **({"words_per_chunk": words_per_chunk} if words_per_chunk else {}))
     if not chunks:
         raise RuntimeError(f"no text extracted from PDF for '{title}'")
 
@@ -131,11 +137,16 @@ async def _summarize_paper(
 async def _test_hypothesis(
     client: httpx.AsyncClient, gateway_url: str, token: str, slug: str, hypothesis: str, index: int
 ) -> HypothesisResult:
-    hypothesis_yaml = render_pipeline_yaml(_PIPELINES_DIR / "physics_hypothesis.yaml", _MODELS_PATH)
+    # physics_hypothesis.yaml mixes LlmTransform steps (dispatched to the
+    # gateway) with deterministic physics-check steps that moonstar-rs has
+    # no way to run (see local_pipeline module docstring) — so this walks
+    # the DAG locally rather than submitting the whole YAML as one session.
     print(f"Testing hypothesis {index}: {hypothesis[:70]}...")
     try:
-        status = await submit_and_wait(client, gateway_url, token, hypothesis_yaml, {"hypothesis": hypothesis})
-    except (httpx.HTTPError, PipelineRunError) as exc:
+        status = await local_pipeline.run_physics_hypothesis(
+            hypothesis, gateway_url, token, _PIPELINES_DIR / "physics_hypothesis.yaml", _MODELS_PATH
+        )
+    except (httpx.HTTPError, PipelineRunError, local_pipeline.PipelineRunError) as exc:
         return HypothesisResult(hypothesis=hypothesis, verdict="ERROR", writeup=str(exc), wave1_results={}, run_path=None)
 
     runs_dir = _REVIEWS_DIR / slug / "runs"
@@ -182,7 +193,9 @@ async def _publish(slug: str) -> int:
 
     async with httpx.AsyncClient(timeout=10.0) as client:
         try:
-            summary = await _summarize_paper(client, gateway_url, token, spec.title, text)
+            summary = await _summarize_paper(
+                client, gateway_url, token, spec.title, text, words_per_chunk=spec.words_per_chunk
+            )
         except (ChunkingError, PipelineRunError) as exc:
             print(f"ERROR: paper summarization failed: {exc}", file=sys.stderr)
             return 1

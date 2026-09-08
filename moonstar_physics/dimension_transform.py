@@ -12,9 +12,7 @@ from __future__ import annotations
 import math
 from typing import Any
 
-from moonstar_core import SessionContext
-from moonstar_core.exceptions import NonRetryableTransformError
-
+from ._compat import NonRetryableTransformError, SessionContext
 from ._parsing import parse_extractor_output
 
 _MAX_DIMENSION = 1000  # generous ceiling for any real spacetime/representation dimension claim

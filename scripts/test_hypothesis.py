@@ -6,7 +6,13 @@ Usage:
 
 Env vars:
     MOONSTAR_GATEWAY_URL   default http://localhost:8000
-    MOONSTAR_AUTH_TOKEN    required — get one via `python -m moonstar_gateway.cli seed-user`
+    MOONSTAR_AUTH_TOKEN    required — get one via `bash scripts/harness.sh token` in moonstar-rs
+
+physics_hypothesis.yaml mixes LlmTransform steps (dispatched to the
+gateway) with deterministic physics-check steps moonstar-rs has no way to
+run (see moonstar_physics/local_pipeline.py's module docstring) — this
+script runs the DAG locally via that module rather than submitting the
+whole YAML as one gateway session.
 """
 from __future__ import annotations
 
@@ -16,7 +22,8 @@ import os
 import sys
 from pathlib import Path
 
-import httpx
+sys.path.insert(0, str(Path(__file__).parent.parent))
+from moonstar_physics.local_pipeline import run_physics_hypothesis  # noqa: E402
 
 # Windows consoles default stdout/stderr to the system codepage (e.g. cp1252),
 # which raises UnicodeEncodeError on ordinary LLM output (em/en dashes, smart
@@ -29,16 +36,6 @@ for _stream in (sys.stdout, sys.stderr):
 _ROOT_DIR = Path(__file__).parent.parent
 _PIPELINE_DIR = _ROOT_DIR / "pipelines"
 _RUNS_DIR = _ROOT_DIR / "runs"
-_POLL_INTERVAL_SECONDS = 2
-_MAX_POLLS = 90
-
-
-def _load_pipeline_yaml() -> str:
-    models = json.loads((_PIPELINE_DIR / "models.json").read_text(encoding="utf-8"))
-    text = (_PIPELINE_DIR / "physics_hypothesis.yaml").read_text(encoding="utf-8")
-    for key, model in models.items():
-        text = text.replace("{{" + key + "}}", model)
-    return text
 
 
 def _save_session_artifacts(session_id: str, status_data: dict) -> Path:
@@ -61,46 +58,28 @@ async def _run(hypothesis: str) -> int:
         print("ERROR: MOONSTAR_AUTH_TOKEN is not set", file=sys.stderr)
         return 1
 
-    yaml_spec = _load_pipeline_yaml()
-    headers = {"Authorization": f"Bearer {token}"}
+    print(f"Submitting hypothesis to {gateway_url} (LLM steps only — physics checks run locally) ...")
+    status_data = await run_physics_hypothesis(
+        hypothesis, gateway_url, token,
+        _PIPELINE_DIR / "physics_hypothesis.yaml", _PIPELINE_DIR / "models.json",
+    )
+    session_id = status_data.get("session_id", "unknown")
+    status = status_data.get("status")
 
-    async with httpx.AsyncClient(timeout=10.0) as client:
-        print(f"Submitting hypothesis to {gateway_url} ...")
-        submit_resp = await client.post(
-            f"{gateway_url}/pipelines/run",
-            json={"yaml_spec": yaml_spec, "initial_input": {"hypothesis": hypothesis}},
-            headers=headers,
-        )
-        submit_resp.raise_for_status()
-        session_id = submit_resp.json()["session_id"]
-        print(f"Session: {session_id}")
+    artifacts_path = _save_session_artifacts(session_id, status_data)
+    print(f"Full run artifacts saved to: {artifacts_path}")
 
-        for _ in range(_MAX_POLLS):
-            await asyncio.sleep(_POLL_INTERVAL_SECONDS)
-            status_resp = await client.get(f"{gateway_url}/sessions/{session_id}", headers=headers)
-            status_resp.raise_for_status()
-            status_data = status_resp.json()
-            status = status_data.get("status")
-
-            if status in ("completed", "failed", "rejected"):
-                artifacts_path = _save_session_artifacts(session_id, status_data)
-                print(f"Full session artifacts saved to: {artifacts_path}")
-
-            if status == "completed":
-                for artifact in status_data.get("artifacts", []):
-                    if artifact.get("transform_name") == "synthesizer":
-                        writeup = (artifact.get("data") or {}).get("response", "")
-                        print("\n" + writeup.strip())
-                        return 0
-                print("ERROR: session completed but no synthesizer artifact found", file=sys.stderr)
-                return 1
-
-            if status in ("failed", "rejected"):
-                print(f"ERROR: session {status}: see {artifacts_path} for details", file=sys.stderr)
-                return 1
-
-        print("ERROR: timed out waiting for session to complete", file=sys.stderr)
+    if status == "completed":
+        for artifact in status_data.get("artifacts", []):
+            if artifact.get("transform_name") == "synthesizer":
+                writeup = (artifact.get("data") or {}).get("response", "")
+                print("\n" + writeup.strip())
+                return 0
+        print("ERROR: run completed but no synthesizer artifact found", file=sys.stderr)
         return 1
+
+    print(f"ERROR: run {status}: see {artifacts_path} for details", file=sys.stderr)
+    return 1
 
 
 def main() -> None:

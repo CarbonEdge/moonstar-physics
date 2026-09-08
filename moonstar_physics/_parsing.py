@@ -10,7 +10,7 @@ from __future__ import annotations
 import json
 from typing import Any
 
-from moonstar_core.exceptions import NonRetryableTransformError
+from ._compat import NonRetryableTransformError
 
 
 def parse_extractor_output(input: dict[str, Any]) -> dict[str, Any]:

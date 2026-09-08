@@ -5,9 +5,7 @@ import json
 from unittest.mock import AsyncMock
 
 import pytest
-from moonstar_core import SessionContext
-from moonstar_core.exceptions import NonRetryableTransformError
-
+from moonstar_physics._compat import NonRetryableTransformError, SessionContext
 from moonstar_physics.dimension_transform import DimensionConsistencyTransform
 
 

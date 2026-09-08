@@ -6,8 +6,7 @@ import math
 from unittest.mock import AsyncMock
 
 import pytest
-from moonstar_core import SessionContext
-
+from moonstar_physics._compat import SessionContext
 from moonstar_physics.qm_calc_transform import QMCalculationTransform
 
 

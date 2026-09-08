@@ -4,8 +4,7 @@ from __future__ import annotations
 import json
 
 import pytest
-from moonstar_core.exceptions import NonRetryableTransformError
-
+from moonstar_physics._compat import NonRetryableTransformError
 from moonstar_physics._parsing import parse_extractor_output
 
 

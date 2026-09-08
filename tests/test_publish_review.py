@@ -83,9 +83,9 @@ async def test_summarize_paper_raises_after_both_attempts_fail():
 
 async def test_test_hypothesis_returns_error_verdict_on_pipeline_failure(tmp_path, monkeypatch):
     monkeypatch.setattr(publish_review, "_REVIEWS_DIR", tmp_path / "reviews")
-    mock_submit = AsyncMock(side_effect=PipelineRunError("boom"))
+    mock_run = AsyncMock(side_effect=publish_review.local_pipeline.PipelineRunError("boom"))
 
-    with patch.object(publish_review, "submit_and_wait", mock_submit):
+    with patch.object(publish_review.local_pipeline, "run_physics_hypothesis", mock_run):
         result = await publish_review._test_hypothesis(
             client=None, gateway_url="http://x", token="t", slug="paper-slug",
             hypothesis="some hypothesis", index=1,
@@ -97,9 +97,9 @@ async def test_test_hypothesis_returns_error_verdict_on_pipeline_failure(tmp_pat
 
 async def test_test_hypothesis_returns_error_verdict_on_non_completed_status(tmp_path, monkeypatch):
     monkeypatch.setattr(publish_review, "_REVIEWS_DIR", tmp_path / "reviews")
-    mock_submit = AsyncMock(return_value={"status": "failed", "session_id": "abc"})
+    mock_run = AsyncMock(return_value={"status": "failed", "session_id": "abc"})
 
-    with patch.object(publish_review, "submit_and_wait", mock_submit):
+    with patch.object(publish_review.local_pipeline, "run_physics_hypothesis", mock_run):
         result = await publish_review._test_hypothesis(
             client=None, gateway_url="http://x", token="t", slug="paper-slug",
             hypothesis="some hypothesis", index=1,

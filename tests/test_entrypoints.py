@@ -1,7 +1,17 @@
-"""Tests that the four custom transforms are discoverable via moonstar.transforms entrypoints."""
-import asyncio
+"""Tests that the four custom transforms' `moonstar.transforms` entrypoint
+declarations in pyproject.toml resolve to real, awaitable callables.
 
-from moonstar_core.registry import ProviderRegistry
+Previously loaded through the Python `moonstar` gateway's
+`moonstar_core.registry.ProviderRegistry` (`importlib.metadata`
+entry_points()) — that gateway no longer exists in this workspace, and
+these transforms now run locally rather than through any gateway registry
+(see moonstar_physics/local_pipeline.py). This test keeps checking the one
+thing that still matters: pyproject.toml's declared entry points actually
+point at real, importable, awaitable functions, so the declaration doesn't
+silently rot.
+"""
+import asyncio
+from importlib.metadata import entry_points
 
 _TRANSFORM_NAMES = (
     "ConservationLawCheckTransform",
@@ -11,36 +21,21 @@ _TRANSFORM_NAMES = (
 )
 
 
-def test_conservation_law_check_transform_entrypoint():
-    reg = ProviderRegistry()
-    reg.load_installed()
-    fn = reg.get("ConservationLawCheckTransform")
-    assert fn is not None
+def _entry_points_for_group() -> dict[str, str]:
+    eps = entry_points(group="moonstar.transforms")
+    return {ep.name: ep.value for ep in eps}
 
 
-def test_qm_calculation_transform_entrypoint():
-    reg = ProviderRegistry()
-    reg.load_installed()
-    fn = reg.get("QMCalculationTransform")
-    assert fn is not None
-
-
-def test_reference_data_lookup_transform_entrypoint():
-    reg = ProviderRegistry()
-    reg.load_installed()
-    fn = reg.get("ReferenceDataLookupTransform")
-    assert fn is not None
-
-
-def test_dimension_consistency_transform_entrypoint():
-    reg = ProviderRegistry()
-    reg.load_installed()
-    fn = reg.get("DimensionConsistencyTransform")
-    assert fn is not None
-
-
-def test_all_four_entrypoints_are_awaitable():
-    reg = ProviderRegistry()
-    reg.load_installed()
+def test_all_four_transforms_are_declared():
+    declared = _entry_points_for_group()
     for name in _TRANSFORM_NAMES:
-        assert asyncio.iscoroutinefunction(reg.get(name))
+        assert name in declared, f"{name} missing from moonstar.transforms entry points"
+
+
+def test_all_four_entrypoints_resolve_to_awaitable_callables():
+    eps = entry_points(group="moonstar.transforms")
+    for name in _TRANSFORM_NAMES:
+        matches = [ep for ep in eps if ep.name == name]
+        assert matches, f"{name} missing from moonstar.transforms entry points"
+        fn = matches[0].load()
+        assert asyncio.iscoroutinefunction(fn)

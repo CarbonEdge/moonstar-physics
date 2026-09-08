@@ -1,17 +1,18 @@
 """Validates the physics_hypothesis.yaml dependency graph.
 
-Uses moonstar_executor.models.PipelineSpec directly (same class the gateway
-worker uses to parse pipeline YAML) rather than re-implementing YAML parsing,
-so this test fails if the YAML doesn't actually match what the executor
-will do with it — e.g. a stray `depends_on:` key (which TransformSpec has
-no field for) would be silently ignored by Pydantic and only show up here
-as a wrong `deps` list, not as a parse error.
+Uses moonstar_physics._pipeline_spec.PipelineSpec — the same parser
+local_pipeline.py uses to walk this YAML locally (see its module docstring
+for why: moonstar-rs, the current gateway, has no runtime plugin mechanism
+for the physics-specific transform types below, so this pipeline's
+deterministic steps run in-process rather than through any gateway
+registry; there is no longer a shared Python executor class to validate
+against).
 """
 from __future__ import annotations
 
 from pathlib import Path
 
-from moonstar_executor.models import PipelineSpec
+from moonstar_physics._pipeline_spec import PipelineSpec
 
 _PIPELINE_PATH = Path(__file__).parent.parent / "pipelines" / "physics_hypothesis.yaml"
 
@@ -28,9 +29,7 @@ def _load_spec_with_placeholders_filled() -> PipelineSpec:
     text = _PIPELINE_PATH.read_text(encoding="utf-8")
     for key in ("MODEL_EXTRACTOR", "MODEL_CRITIC", "MODEL_DECISION_MAKER"):
         text = text.replace("{{" + key + "}}", "test/placeholder-model")
-    import yaml
-    data = yaml.safe_load(text)
-    return PipelineSpec.model_validate({**data["pipeline"], "transforms": data["transforms"]})
+    return PipelineSpec.from_yaml_text(text)
 
 
 def test_pipeline_loads():

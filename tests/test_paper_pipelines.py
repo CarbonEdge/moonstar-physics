@@ -1,13 +1,12 @@
 """Validates paper_chunk_summary.yaml and paper_reduce_summary.yaml — same
-approach as test_physics_hypothesis_pipeline.py: parse via PipelineSpec
-(the class the gateway worker actually uses), not hand-rolled YAML checks.
+approach as test_physics_hypothesis_pipeline.py: parse via
+moonstar_physics._pipeline_spec.PipelineSpec, not hand-rolled YAML checks.
 """
 from __future__ import annotations
 
 from pathlib import Path
 
-import yaml
-from moonstar_executor.models import PipelineSpec
+from moonstar_physics._pipeline_spec import PipelineSpec
 
 _PIPELINES_DIR = Path(__file__).parent.parent / "pipelines"
 
@@ -15,8 +14,7 @@ _PIPELINES_DIR = Path(__file__).parent.parent / "pipelines"
 def _load_spec(filename: str) -> PipelineSpec:
     text = (_PIPELINES_DIR / filename).read_text(encoding="utf-8")
     text = text.replace("{{MODEL_SUMMARIZER}}", "test/placeholder-model")
-    data = yaml.safe_load(text)
-    return PipelineSpec.model_validate({**data["pipeline"], "transforms": data["transforms"]})
+    return PipelineSpec.from_yaml_text(text)
 
 
 def test_paper_chunk_summary_pipeline_loads():

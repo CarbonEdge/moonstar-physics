@@ -22,6 +22,12 @@ class PaperSpec:
     pdf: str
     source_url: str | None
     hypotheses: list[str]
+    # Override for chunking.chunk_text's words_per_chunk default (3000).
+    # Only needed for papers long enough to exceed max_chunks (20) at the
+    # default chunk size — widening the chunk size keeps the chunk COUNT
+    # (and therefore LLM-call budget) within the existing cap rather than
+    # raising the cap itself.
+    words_per_chunk: int | None = None
 
 
 def _require_string(data: dict, key: str, path: Path) -> str:
@@ -45,6 +51,15 @@ def _optional_string(data: dict, key: str, path: Path) -> str | None:
     return value
 
 
+def _optional_positive_int(data: dict, key: str, path: Path) -> int | None:
+    value = data.get(key)
+    if value is None:
+        return None
+    if isinstance(value, bool) or not isinstance(value, int) or value <= 0:
+        raise PaperSpecError(f"{path}: '{key}' must be a positive integer if present")
+    return value
+
+
 def load_paper_spec(path: Path) -> PaperSpec:
     try:
         data = yaml.safe_load(path.read_text(encoding="utf-8"))
@@ -62,4 +77,5 @@ def load_paper_spec(path: Path) -> PaperSpec:
         pdf=_require_string(data, "pdf", path),
         source_url=_optional_string(data, "source_url", path),
         hypotheses=_require_string_list(data, "hypotheses", path),
+        words_per_chunk=_optional_positive_int(data, "words_per_chunk", path),
     )

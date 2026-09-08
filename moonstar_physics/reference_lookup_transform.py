@@ -4,9 +4,8 @@ from __future__ import annotations
 from typing import Any
 
 import sympy
-from moonstar_core import SessionContext
-from moonstar_core.exceptions import NonRetryableTransformError
 
+from ._compat import NonRetryableTransformError, SessionContext
 from ._parsing import parse_extractor_output
 from ._particle_data import load_particle_data
 

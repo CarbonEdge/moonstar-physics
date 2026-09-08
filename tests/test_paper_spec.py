@@ -43,6 +43,32 @@ def test_optional_fields_can_be_omitted(tmp_path):
 
     assert spec.draft_date is None
     assert spec.source_url is None
+    assert spec.words_per_chunk is None
+
+
+def test_words_per_chunk_override_is_loaded(tmp_path):
+    path = tmp_path / "long.yaml"
+    path.write_text(
+        'title: "T"\nauthors: ["A"]\npdf: "papers/pdfs/t.pdf"\nhypotheses: ["h"]\nwords_per_chunk: 4500\n',
+        encoding="utf-8",
+    )
+
+    spec = load_paper_spec(path)
+
+    assert spec.words_per_chunk == 4500
+
+
+@pytest.mark.parametrize("bad_value", [0, -1, "4500", True])
+def test_invalid_words_per_chunk_raises(tmp_path, bad_value):
+    path = tmp_path / "bad.yaml"
+    path.write_text(
+        'title: "T"\nauthors: ["A"]\npdf: "papers/pdfs/t.pdf"\nhypotheses: ["h"]\n'
+        f"words_per_chunk: {bad_value!r}\n",
+        encoding="utf-8",
+    )
+
+    with pytest.raises(PaperSpecError, match="words_per_chunk"):
+        load_paper_spec(path)
 
 
 def test_invalid_yaml_raises_paper_spec_error(tmp_path):
