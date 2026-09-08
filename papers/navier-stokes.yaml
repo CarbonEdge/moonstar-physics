@@ -1,0 +1,14 @@
+title: "Finite Time Blowup for Navier–Stokes"
+authors: ["OpenAI"]
+draft_date: null
+pdf: "papers/pdfs/navier-stokes.pdf"
+source_url: null
+# 165 pages / ~86.7k words -> 29 chunks at the 3000-word default, over the
+# 20-chunk cap. 4500 words/chunk keeps this at exactly 20 chunks instead of
+# raising the cap itself.
+words_per_chunk: 4500
+hypotheses:
+  - "For every positive viscosity ν, there exists a smooth, compactly-supported forcing term f such that the three-dimensional incompressible Navier–Stokes equations, starting from zero initial velocity, produce a solution whose velocity becomes unbounded (L-infinity norm diverges) in finite time while its kinetic energy (L2 norm) stays uniformly bounded for all time before the blowup."
+  - "This finite-time-blowup-with-bounded-energy construction establishes alternative (C) of the Fefferman Millennium Prize problem statement for the Navier–Stokes existence and smoothness problem — i.e. that there is no smooth solution on all of space and all positive time with uniformly bounded kinetic energy for this force and initial data."
+  - "The same compactly-supported construction also yields a corresponding finite-time blowup solution on the 3-torus T3 = R3/Z3, establishing alternative (D) of the Fefferman Millennium Prize problem statement."
+  - "The blowup mechanism relies on constructing a sequence of self-similar-like oscillatory corrections to a leading-order flow, order by order, so that the residual stress can be realized by an admissible smooth forcing term supported in a fixed compact spacetime region."
