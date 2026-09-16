@@ -92,16 +92,16 @@ disagreement reports `INCONCLUSIVE` rather than picking a side.
 
 ```bash
 bash scripts/build_sandbox_image.sh
-python -c "
+python3 << 'PYEOF'
 import asyncio, json
 from moonstar_physics.numerical_experiment_transform import NumericalExperimentTransform
 from moonstar_physics._compat import SessionContext
 
-code = 'print(\"RESULT: {\\\"ok\\\": true}\")'
+code = 'print(\'RESULT: {"ok": true}\')'
 input_ = {'experiment_codegen_a': {'response': json.dumps({'code': code})}}
 result = asyncio.run(NumericalExperimentTransform(input_, {}, SessionContext()))
 print(result)
-"
+PYEOF
 ```
 Expected output: `{'ran': True, 'result': {'ok': True}, ...}`.
 
