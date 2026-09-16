@@ -1,0 +1,358 @@
+pipeline:
+  name: proof-hypothesis-numerical
+  version: "1.0"
+  description: >
+    Extends proof_hypothesis.yaml's algebra-step verification with an
+    opt-in, fully-automated numerical-evidence stage: an LLM derives a
+    numerically tractable reduction of the hypothesis twice, independently;
+    each derivation is turned into a self-contained numpy/scipy script and
+    run in an isolated Docker sandbox; an evidence critic compares the two
+    runs before anything reaches devils_advocate/synthesizer. Numerical
+    evidence only ever corroborates or contradicts the symbolic algebra
+    verdict from identity_checks — it can never by itself establish
+    PLAUSIBLE, and disagreement between the two independent runs is
+    reported as inconclusive, never resolved by picking one.
+
+transforms:
+  - name: Extractor
+    type: LlmTransform
+    config:
+      model: "{{MODEL_EXTRACTOR}}"
+      max_tokens: 2000
+      system: |
+        You extract a proof-paper hypothesis into structured JSON. The
+        hypothesis text explicitly states one or more concrete algebraic
+        relations transcribed from the paper (equations, substitutions,
+        exponent arithmetic) — your job is to pull those relations out as
+        sympy-parseable expression strings, not to evaluate or complete
+        them. Output ONLY the JSON object below, no markdown fences, no
+        commentary.
+
+        Schema:
+        {
+          "proof_context": "<1-2 sentence restatement of what this hypothesis claims overall>",
+          "algebraic_claims": [
+            {
+              "description": "<free text, e.g. 'self-similar substitution reduces to profile equation'>",
+              "lhs": "<sympy-parseable expression string>",
+              "rhs": "<sympy-parseable expression string>",
+              "variables": ["<free variable names appearing in lhs or rhs>"]
+            }
+          ]
+        }
+
+        Rules:
+        - Only include an entry in algebraic_claims for a relation the
+          hypothesis text explicitly states as an equation (has a clear
+          left-hand side and right-hand side). Never invent an equation
+          the text doesn't state.
+        - If the hypothesis is pure prose with no stated equation, return
+          an empty algebraic_claims list — do not force-fit unrelated
+          claims into this schema.
+        - CRITICAL: if the hypothesis text defines a named quantity (e.g.
+          "A = 1/2 + h") and then states a further equation using that
+          name (e.g. "A + D = 1"), you MUST substitute the definition
+          into lhs/rhs before output — e.g. lhs "(1/2 + h) + (1/2 - h)",
+          never lhs "A + D". A checker that only sees isolated symbol
+          names like A and D has no way to know their values and will
+          wrongly report a true claim as violated. Only list a name in
+          "variables" if the text never gives it a concrete definition
+          (a genuinely free variable, e.g. "h" or "n" ranging over all
+          values).
+        - CRITICAL: a defining assignment (e.g. "A = 1/2 + h" introducing
+          the name A) is NOT itself a claim to check — it is notation
+          the text is establishing, not an identity to verify. Do NOT
+          emit an algebraic_claims entry with lhs "A" and rhs "1/2 + h"
+          (or any entry that just restates one definition on its own).
+          Only emit entries for equations that USE one or more
+          already-defined names in a further relationship (after
+          substituting those definitions in, per the rule above). If a
+          hypothesis states nothing but bare definitions with no further
+          equation relating them, return an empty algebraic_claims list.
+        - CRITICAL: never invent a sub-derivation to justify a number the
+          hypothesis text already gives you as a fact. If the text says
+          "the exponent contributed by X is -3/2", take -3/2 at face
+          value wherever it's used in a checkable equation — do NOT add
+          a separate claim re-deriving where -3/2 itself comes from
+          unless the hypothesis text spells out that exact justifying
+          equation in those terms.
+        - Use standard sympy syntax: "**" for exponents, "Rational(a, b)"
+          for exact fractions (never decimals like "0.5" for a claim that
+          depends on exactness), explicit "*" for multiplication.
+        - List every symbol used in lhs or rhs (other than a handful of
+          reserved names sympy understands directly: pi, E, I, oo) in
+          "variables".
+
+  - name: identity_checks
+    type: AlgebraicClaimsCheckTransform
+    input: Extractor
+
+  - name: proof_critic
+    type: LlmTransform
+    input: Extractor
+    config:
+      model: "{{MODEL_CRITIC}}"
+      max_tokens: 1400
+      system: |
+        You are a proof-review critic. You receive a structured
+        proof-paper hypothesis (JSON) with a "proof_context" (the overall
+        claim) and "algebraic_claims" (specific equations transcribed
+        from the paper). You do NOT know yet whether those equations
+        checked out symbolically — that's handled elsewhere. Your job:
+        assess whether, IF every listed algebraic_claims entry turns out
+        to be symbolically consistent, that would actually be enough to
+        support "proof_context"'s overall claim, or whether there's a
+        logical gap between these local algebraic steps and the global
+        result being asserted. Also note if "algebraic_claims" is empty
+        or clearly incomplete relative to what "proof_context" asserts.
+
+        OUTPUT ONLY THIS JSON (no markdown, no code fences):
+        {"algebra_sufficient_if_verified": true, "logical_gap": "description or none", "assessment": "2-3 sentence narrative"}
+
+  - name: reduction_a
+    type: LlmTransform
+    config: &reduction_config
+      model: "{{MODEL_CRITIC}}"
+      max_tokens: 1500
+      system: |
+        You derive a numerically tractable reduction of a proof-paper
+        hypothesis, so its qualitative behavior can be tested
+        computationally instead of only symbolically. You receive the
+        hypothesis text and a summary of the source paper (context only —
+        the paper's own claim is often too complex to simulate directly
+        at full generality; find the smallest computationally tractable
+        reduction that still captures the phenomenon the hypothesis
+        describes, e.g. a self-similar profile ODE, a reduced/
+        lower-dimensional system, or a toy model preserving the key
+        qualitative mechanism).
+
+        Output ONLY the JSON object below, no markdown fences, no
+        commentary.
+
+        Schema:
+        {
+          "reduction_description": "<2-4 sentence description of the tractable reformulation and why it captures the hypothesis's phenomenon>",
+          "equations": "<the reduced equations/ODE system, parameters, and initial/boundary conditions, precise enough for a second step to implement numerically without further guessing>",
+          "claimed_signature": "<the specific, checkable qualitative or quantitative behavior the hypothesis implies this reduction should show, e.g. 'the L-infinity norm of the velocity diverges before t=1 while the L2 norm stays below 2.0 throughout'>"
+        }
+
+        Rules:
+        - The reduction must be genuinely tractable in a short numpy/scipy
+          script (ODE integration or a small finite-difference grid, not
+          a full 3D PDE solve) — if no tractable reduction exists for this
+          hypothesis, set "reduction_description" to "no tractable
+          reduction found" and leave "equations"/"claimed_signature" as
+          empty strings.
+        - "claimed_signature" must be specific enough that a script's
+          printed numeric output could either match or contradict it —
+          not a vague restatement of the hypothesis.
+
+  - name: reduction_b
+    type: LlmTransform
+    config: *reduction_config
+
+  - name: experiment_codegen_a
+    type: LlmTransform
+    input: reduction_a
+    config: &codegen_config
+      model: "{{MODEL_CRITIC}}"
+      max_tokens: 3000
+      system: |
+        You write a self-contained Python script that numerically tests a
+        proposed reduction of a proof-paper hypothesis. You receive a
+        reduction description, its equations/parameters, and the
+        qualitative signature it should exhibit if the hypothesis holds.
+
+        Output ONLY the JSON object below, no markdown fences, no
+        commentary.
+
+        Schema:
+        {
+          "code": "<complete, self-contained Python source as a single string>"
+        }
+
+        Rules:
+        - The script must use ONLY numpy and scipy (plus the Python
+          standard library) — no other imports, no network access, no
+          file I/O beyond stdout.
+        - The script must implement the given equations/parameters as
+          literally as possible — do not substitute a different, easier
+          problem.
+        - The script MUST print exactly one line starting with "RESULT: "
+          followed by a single JSON object summarizing the observed
+          numeric trend relevant to "claimed_signature" (e.g.
+          RESULT: {"linf_norm_final": 1234.5, "l2_norm_max": 1.8,
+          "diverged": true}). Print this line last, after any other
+          diagnostic output.
+        - If the reduction cannot actually be implemented as given (e.g.
+          underspecified parameters), still print a RESULT line with a
+          field like {"implementable": false, "reason": "..."} rather
+          than crashing or omitting the line.
+        - Keep the script's own runtime well under 30 seconds for the
+          given parameters (coarse grids/short integration windows are
+          fine — this is a qualitative check, not a high-precision
+          solve).
+
+  - name: experiment_codegen_b
+    type: LlmTransform
+    input: reduction_b
+    config: *codegen_config
+
+  - name: sandbox_runner_a
+    type: NumericalExperimentTransform
+    input: experiment_codegen_a
+
+  - name: sandbox_runner_b
+    type: NumericalExperimentTransform
+    input: experiment_codegen_b
+
+  - name: evidence_critic
+    type: LlmTransform
+    input: [reduction_a, reduction_b, sandbox_runner_a, sandbox_runner_b]
+    config:
+      model: "{{MODEL_CRITIC}}"
+      max_tokens: 1200
+      system: |
+        You receive two independently-derived numerical reductions of the
+        same proof-paper hypothesis (reduction_a, reduction_b), each
+        paired with its sandboxed execution result (sandbox_runner_a,
+        sandbox_runner_b — each either {"ran": true, "result": {...}} or
+        {"ran": false, "detail": "..."}).
+
+        Your job:
+        1. Do reduction_a and reduction_b describe qualitatively the same
+           reduction (same phenomenon, same claimed_signature in
+           substance even if worded differently)? If they diverge
+           substantially, say so explicitly — disagreement between two
+           independent derivations means neither can be trusted alone.
+        2. If both sandbox runs succeeded (ran: true), do their numeric
+           results qualitatively agree with EACH OTHER? A single run
+           succeeding while the other failed to run, or the two
+           succeeding with contradictory trends, means the numeric
+           evidence is not usable.
+        3. Only if both derivations agree AND both sandbox runs succeeded
+           AND their results agree with each other: does the
+           agreed-upon numeric trend match what claimed_signature
+           predicted?
+
+        Output ONLY the JSON object below, no markdown fences, no
+        commentary.
+
+        Schema:
+        {
+          "derivations_agree": true,
+          "both_ran_successfully": true,
+          "results_agree_with_each_other": true,
+          "results_match_claimed_signature": true,
+          "verdict": "corroborates | contradicts | inconclusive",
+          "assessment": "2-4 sentence explanation, naming the actual numeric values you compared"
+        }
+
+        Rules:
+        - "verdict" must be "inconclusive" whenever ANY of
+          derivations_agree, both_ran_successfully, or
+          results_agree_with_each_other is false — inconclusive is not a
+          failure, it is the honest answer when the double-derivation
+          safeguard didn't converge.
+        - Never report "corroborates" or "contradicts" from a single
+          successful run alone — both runs must have succeeded and
+          agreed with each other first.
+        - For any phenomenon involving a singularity, blowup, or
+          divergence, explicitly note in "assessment" that numerical
+          evidence of divergence is inherently ambiguous (an
+          under-resolved grid can mimic real blowup), even when the
+          verdict is "corroborates".
+
+  - name: devils_advocate
+    type: LlmTransform
+    input: [identity_checks, proof_critic, evidence_critic]
+    config:
+      model: "{{MODEL_CRITIC}}"
+      max_tokens: 1200
+      system: |
+        You receive three wave-1 outputs on a proof-paper hypothesis: an
+        identity_checks result (the symbolic verdict on each transcribed
+        algebraic sub-claim), a proof_critic assessment (whether the
+        algebra, if verified, would actually support the overall claim),
+        and an evidence_critic result (whether an independently-derived,
+        sandboxed numerical experiment corroborates, contradicts, or is
+        inconclusive about the hypothesis's claimed behavior). Challenge
+        the emerging consensus:
+
+        1. Does identity_checks' aggregate verdict agree with
+           proof_critic's take? A "violated" verdict on any individual
+           claim should outweigh any LLM intuition that the overall proof
+           still holds.
+        2. Is identity_checks' aggregate verdict "not_applicable"? If so,
+           say explicitly that nothing was symbolically verified.
+        3. Does evidence_critic's verdict actually add anything, or is it
+           "inconclusive" (in which case treat it as no evidence either
+           way, not as a tiebreaker)?
+        4. CRITICAL: evidence_critic's result must NEVER be treated as
+           more authoritative than identity_checks — numerical evidence
+           is exploratory and can never by itself establish a claim
+           identity_checks found violated or couldn't check.
+        5. What's the strongest case that even fully-verified local
+           algebra plus corroborating numerical evidence still wouldn't
+           establish the paper's overall claim?
+
+        OUTPUT ONLY THIS JSON (no markdown, no code fences):
+        {"agreement": "description", "contradiction": "description or none", "coverage_gaps": ["which claims/steps weren't verifiable and why that matters"], "numerical_evidence_weight": "how much (if any) the evidence_critic result should actually influence the verdict, and why", "strongest_objection": "one sentence"}
+
+  - name: synthesizer
+    type: LlmTransform
+    input: [identity_checks, proof_critic, evidence_critic, devils_advocate]
+    config:
+      model: "{{MODEL_DECISION_MAKER}}"
+      max_tokens: 50000
+      system: |
+        You are producing the final answer for someone who asked whether
+        a proof paper's own transcribed algebra holds up, now cross-checked
+        against an independently-derived numerical experiment. You
+        receive: an identity_checks result (per-claim symbolic verdicts
+        and one aggregate verdict), a proof_critic assessment, an
+        evidence_critic result (comparing two independent numerical
+        derivations/sandbox runs), and a devil's advocate challenge.
+
+        Structure your response EXACTLY like this, in this order:
+
+        VERDICT: PLAUSIBLE | INCONSISTENT | INCONCLUSIVE
+
+        <then the conversational explanation>
+
+        The first line must be the verdict — pick exactly one of
+        PLAUSIBLE, INCONSISTENT, or INCONCLUSIVE (use INCONCLUSIVE when
+        identity_checks' aggregate verdict is not_applicable AND
+        evidence_critic's verdict is inconclusive — nothing concrete was
+        established either way). Put it first so it survives even if
+        your explanation gets cut short.
+
+        CRITICAL: PLAUSIBLE here means ONLY "the transcribed algebra is
+        internally consistent" — it never means "the theorem is proven."
+        This pipeline cannot and does not establish the underlying
+        mathematical result; say so explicitly in your explanation.
+
+        CRITICAL: numerical evidence (evidence_critic) can only ever
+        corroborate or contradict the symbolic algebra verdict
+        (identity_checks) — it can NEVER by itself flip a verdict to
+        PLAUSIBLE, and an "inconclusive" or missing numerical result must
+        never be read as a soft pass. If identity_checks found a
+        violation, the verdict is INCONSISTENT regardless of what the
+        numerical evidence shows. If identity_checks is not_applicable
+        or consistent, numerical corroboration can be mentioned as an
+        additional, weaker signal — but always name that numerical
+        evidence of divergence/blowup phenomena is inherently ambiguous
+        (under-resolved grids can mimic real blowup), even when it
+        corroborates.
+
+        After the verdict line, write a conversational explanation: what
+        the hypothesis claims (proof_context), which specific algebraic
+        claims were checked and what each verdict was, what the numerical
+        evidence showed (or why it was inconclusive), what proof_critic
+        and the devil's advocate added, and your overall take. If
+        identity_checks' aggregate verdict is not_applicable, say so
+        explicitly rather than implying anything passed.
+
+budget:
+  max_usd: 3.00
+  max_wallclock_seconds: 600
