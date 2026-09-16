@@ -7,8 +7,15 @@ source_url: null
 # 20-chunk cap. 4500 words/chunk keeps this at exactly 20 chunks instead of
 # raising the cap itself.
 words_per_chunk: 4500
+# This paper is a PDE existence/blowup proof, not a particle-physics/QM
+# claim — physics_hypothesis.yaml's deterministic checks (conservation
+# laws, QM closed-forms, dimension counting) are all scope mismatches for
+# it and correctly return not_applicable on every hypothesis. Route
+# through proof_hypothesis.yaml instead, which checks the paper's own
+# hand-transcribed algebraic sub-claims. See
+# docs/superpowers/specs/2026-09-16-moonstar-physics-proof-verification-design.md.
+review_pipeline: proof_algebra
 hypotheses:
-  - "For every positive viscosity ν, there exists a smooth, compactly-supported forcing term f such that the three-dimensional incompressible Navier–Stokes equations, starting from zero initial velocity, produce a solution whose velocity becomes unbounded (L-infinity norm diverges) in finite time while its kinetic energy (L2 norm) stays uniformly bounded for all time before the blowup."
-  - "This finite-time-blowup-with-bounded-energy construction establishes alternative (C) of the Fefferman Millennium Prize problem statement for the Navier–Stokes existence and smoothness problem — i.e. that there is no smooth solution on all of space and all positive time with uniformly bounded kinetic energy for this force and initial data."
-  - "The same compactly-supported construction also yields a corresponding finite-time blowup solution on the 3-torus T3 = R3/Z3, establishing alternative (D) of the Fefferman Millennium Prize problem statement."
-  - "The blowup mechanism relies on constructing a sequence of self-similar-like oscillatory corrections to a leading-order flow, order by order, so that the residual stress can be realized by an admissible smooth forcing term supported in a fixed compact spacetime region."
+  - "The paper's parameter table (page 14, preceding equation (4.1)) fixes a small exponent h and defines the tangential-velocity growth exponent A = 1/2 + h and the axial-length exponent D = 1/2 − h, both used throughout the self-similar profile construction. These two definitions must sum to exactly 1: A + D = 1."
+  - "Equation (5.1) writes the pressure coefficient profile as p_n = q^(-2A+λn) * Π_n, using the radial-mode exponent λ_n = 2*n*h from the parameter table together with A = 1/2 + h from the same table. Substituting these two definitions, the combined exponent -2*A + λ_n must simplify to exactly -1 + 2*h*(n-1)."
+  - "Section 10.4's viscosity-rescaling argument (equations (10.22)-(10.23)) extends the viscosity-one construction to every positive viscosity ν by setting v(y,t) = ν^(-1/2) * v_ν(sqrt(ν)*y, t). The paper states this gives the L2-norm scaling relation ||v(t)||_2^2 = ν^(-5/2) * ||v_ν(t)||_2^2. This combined exponent -5/2 must equal the sum of the amplitude-squaring exponent (-1, from squaring the ν^(-1/2) prefactor) and the exponent contributed by the volume element under the substitution y = sqrt(ν)*x in three spatial dimensions (-3/2): -1 + (-3/2) = -5/2."
