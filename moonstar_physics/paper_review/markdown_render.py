@@ -39,7 +39,7 @@ def render_review_markdown(review: ReviewData, models: dict[str, str]) -> str:
 
     lines.append("## Methodology")
     lines.append("")
-    lines.append(render_methodology(models))
+    lines.append(render_methodology(models, review.review_pipeline))
     lines.append("")
 
     lines.append("## Tested Hypotheses")

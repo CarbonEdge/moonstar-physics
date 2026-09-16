@@ -38,18 +38,32 @@ def _verdict_tally(review: ReviewData) -> str:
     return ", ".join(parts)
 
 
+_ABSTRACT_PIPELINE_DESCRIPTIONS = {
+    "qm_hypothesis": (
+        "via the Moonstar physics-hypothesis pipeline (deterministic "
+        "conservation-law/QM/dimension checks cross-examined by an LLM theory critic and devil's advocate)"
+    ),
+    "proof_algebra": (
+        "via the Moonstar proof-algebra pipeline (hand-transcribed algebraic sub-claims verified "
+        "symbolically via sympy, cross-examined by an LLM proof critic and devil's advocate)"
+    ),
+}
+
+
 def render_abstract(review: ReviewData) -> str:
     n = len(review.hypothesis_results)
     plural = "claim" if n == 1 else "claims"
+    pipeline_description = _ABSTRACT_PIPELINE_DESCRIPTIONS.get(
+        review.review_pipeline, _ABSTRACT_PIPELINE_DESCRIPTIONS["qm_hypothesis"]
+    )
     return (
         f"An AI-assisted hypothesis-verification review of {review.title} by {_join_authors(review.authors)}, "
-        f"testing {n} curated {plural} via the Moonstar physics-hypothesis pipeline (deterministic "
-        f"conservation-law/QM/dimension checks cross-examined by an LLM theory critic and devil's advocate). "
+        f"testing {n} curated {plural} {pipeline_description}. "
         f"Verdicts: {_verdict_tally(review)}."
     )
 
 
-_METHODOLOGY_TEMPLATE = (
+_QM_HYPOTHESIS_METHODOLOGY_TEMPLATE = (
     "Each hypothesis is tested through Moonstar's physics_hypothesis pipeline: an LLM Extractor converts "
     "the natural-language claim into structured JSON, which is then run through four parallel deterministic "
     "checks (conservation-law, QM calculation, reference-data lookup, and dimension consistency) alongside "
@@ -60,9 +74,29 @@ _METHODOLOGY_TEMPLATE = (
     "Models used: extraction with {extractor}, critique and synthesis with {critic}."
 )
 
+_PROOF_ALGEBRA_METHODOLOGY_TEMPLATE = (
+    "Each hypothesis is tested through Moonstar's proof_hypothesis pipeline: an LLM Extractor pulls "
+    "hand-transcribed algebraic sub-claims (equations transcribed from the paper by the human author) out "
+    "of the natural-language hypothesis into structured JSON; each claim is verified symbolically via sympy "
+    "(AlgebraicClaimsCheckTransform); an LLM proof critic assesses whether the verified algebra would "
+    "actually support the hypothesis's broader claim; a devil's advocate LLM then challenges the emerging "
+    "consensus; finally a synthesizer LLM produces the conversational verdict published here. PLAUSIBLE "
+    "here means only that the transcribed algebra is internally consistent — it never means the underlying "
+    "theorem is proven. Hypotheses, including their embedded equations, are hand-transcribed by the human "
+    "author from the source paper before submission to the pipeline, and all pipeline output is reviewed by "
+    "the author before publication.\n\n"
+    "Models used: extraction with {extractor}, critique and synthesis with {critic}."
+)
 
-def render_methodology(models: dict[str, str]) -> str:
-    return _METHODOLOGY_TEMPLATE.format(
+_METHODOLOGY_TEMPLATES = {
+    "qm_hypothesis": _QM_HYPOTHESIS_METHODOLOGY_TEMPLATE,
+    "proof_algebra": _PROOF_ALGEBRA_METHODOLOGY_TEMPLATE,
+}
+
+
+def render_methodology(models: dict[str, str], review_pipeline: str = "qm_hypothesis") -> str:
+    template = _METHODOLOGY_TEMPLATES.get(review_pipeline, _QM_HYPOTHESIS_METHODOLOGY_TEMPLATE)
+    return template.format(
         extractor=models.get("MODEL_EXTRACTOR", "unknown"),
         critic=models.get("MODEL_CRITIC", "unknown"),
     )

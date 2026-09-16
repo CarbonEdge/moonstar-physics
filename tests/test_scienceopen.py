@@ -113,6 +113,32 @@ def test_render_methodology_falls_back_to_unknown_for_missing_keys():
     assert "unknown" in text
 
 
+def test_render_methodology_defaults_to_qm_hypothesis_description():
+    text = render_methodology({})
+    assert "physics_hypothesis" in text
+    assert "conservation-law" in text
+
+
+def test_render_methodology_describes_proof_algebra_pipeline():
+    text = render_methodology({}, review_pipeline="proof_algebra")
+    assert "proof_hypothesis" in text
+    assert "physics_hypothesis" not in text
+    assert "conservation-law" not in text
+    assert "PLAUSIBLE" in text and "theorem is proven" in text
+
+
+def test_render_abstract_describes_qm_hypothesis_pipeline_by_default():
+    abstract = render_abstract(_review())
+    assert "physics-hypothesis pipeline" in abstract
+
+
+def test_render_abstract_describes_proof_algebra_pipeline():
+    review = _review(review_pipeline="proof_algebra")
+    abstract = render_abstract(review)
+    assert "proof-algebra pipeline" in abstract
+    assert "physics-hypothesis" not in abstract
+
+
 def test_build_scienceopen_metadata_shape():
     review = _review(source_url="https://example.com/paper")
     author = {"name": "Melvin Chotu", "orcid": "0000-0000-0000-0000"}

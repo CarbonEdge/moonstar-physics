@@ -73,7 +73,7 @@ def render_review_html(review: ReviewData, env: Environment, models: dict[str, s
         hypotheses=hypotheses,
         abstract_html=_prose_to_html(render_abstract(review)),
         summary_html=_prose_to_html(review.summary),
-        methodology_html=_prose_to_html(render_methodology(models)),
+        methodology_html=_prose_to_html(render_methodology(models, review.review_pipeline)),
         reference_html=_reference_html(format_citation(review)),
         pdf_href=f"../papers/{review.slug}.pdf",
     )

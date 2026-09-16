@@ -30,6 +30,10 @@ class ReviewData:
     source_url: str | None
     summary: str
     hypothesis_results: list[HypothesisResult] = field(default_factory=list)
+    # "qm_hypothesis" (default) or "proof_algebra" — which pipeline actually
+    # produced hypothesis_results, so rendering can describe it accurately.
+    # Absent on review_data.json files published before this field existed.
+    review_pipeline: str = "qm_hypothesis"
 
     def to_dict(self) -> dict[str, Any]:
         return asdict(self)
@@ -48,4 +52,5 @@ class ReviewData:
             source_url=data.get("source_url"),
             summary=data["summary"],
             hypothesis_results=hypothesis_results,
+            review_pipeline=data.get("review_pipeline", "qm_hypothesis"),
         )

@@ -231,6 +231,7 @@ async def _publish(slug: str) -> int:
         source_url=spec.source_url,
         summary=summary,
         hypothesis_results=hypothesis_results,
+        review_pipeline=spec.review_pipeline,
     )
 
     models = json.loads(_MODELS_PATH.read_text(encoding="utf-8"))

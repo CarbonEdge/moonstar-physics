@@ -56,3 +56,36 @@ def test_from_dict_handles_empty_hypothesis_results():
     review = ReviewData.from_dict(data)
 
     assert review.hypothesis_results == []
+
+
+def test_review_pipeline_defaults_to_qm_hypothesis():
+    review = _sample_review()
+    assert review.review_pipeline == "qm_hypothesis"
+
+
+def test_review_pipeline_round_trips_through_to_dict_from_dict():
+    review = _sample_review()
+    review.review_pipeline = "proof_algebra"
+
+    restored = ReviewData.from_dict(review.to_dict())
+
+    assert restored.review_pipeline == "proof_algebra"
+
+
+def test_from_dict_defaults_review_pipeline_for_old_published_data():
+    # reviews/*/review_data.json files published before this field existed
+    # have no "review_pipeline" key at all — must not raise, must default.
+    data = {
+        "slug": "old-paper",
+        "title": "Old",
+        "authors": ["Nobody"],
+        "draft_date": None,
+        "pdf_path": "papers/pdfs/old.pdf",
+        "source_url": None,
+        "summary": "",
+        "hypothesis_results": [],
+    }
+
+    review = ReviewData.from_dict(data)
+
+    assert review.review_pipeline == "qm_hypothesis"
