@@ -28,6 +28,14 @@ class PaperSpec:
     # (and therefore LLM-call budget) within the existing cap rather than
     # raising the cap itself.
     words_per_chunk: int | None = None
+    # "qm_hypothesis" (default, today's behavior) routes through
+    # physics_hypothesis.yaml; "proof_algebra" routes through
+    # proof_hypothesis.yaml (see docs/superpowers/specs/
+    # 2026-09-16-moonstar-physics-proof-verification-design.md).
+    review_pipeline: str = "qm_hypothesis"
+    # Only meaningful when review_pipeline == "proof_algebra" — opts into
+    # the (separate, not-yet-built) automated numerical-evidence stage.
+    numerical_evidence: bool = False
 
 
 def _require_string(data: dict, key: str, path: Path) -> str:
@@ -60,6 +68,23 @@ def _optional_positive_int(data: dict, key: str, path: Path) -> int | None:
     return value
 
 
+_VALID_REVIEW_PIPELINES = ("qm_hypothesis", "proof_algebra")
+
+
+def _optional_choice(data: dict, key: str, choices: tuple[str, ...], default: str, path: Path) -> str:
+    value = data.get(key, default)
+    if not isinstance(value, str) or value not in choices:
+        raise PaperSpecError(f"{path}: '{key}' must be one of {choices} if present")
+    return value
+
+
+def _optional_bool(data: dict, key: str, default: bool, path: Path) -> bool:
+    value = data.get(key, default)
+    if not isinstance(value, bool):
+        raise PaperSpecError(f"{path}: '{key}' must be a boolean if present")
+    return value
+
+
 def load_paper_spec(path: Path) -> PaperSpec:
     try:
         data = yaml.safe_load(path.read_text(encoding="utf-8"))
@@ -78,4 +103,8 @@ def load_paper_spec(path: Path) -> PaperSpec:
         source_url=_optional_string(data, "source_url", path),
         hypotheses=_require_string_list(data, "hypotheses", path),
         words_per_chunk=_optional_positive_int(data, "words_per_chunk", path),
+        review_pipeline=_optional_choice(
+            data, "review_pipeline", _VALID_REVIEW_PIPELINES, "qm_hypothesis", path
+        ),
+        numerical_evidence=_optional_bool(data, "numerical_evidence", False, path),
     )

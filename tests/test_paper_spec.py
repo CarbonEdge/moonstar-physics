@@ -112,3 +112,55 @@ def test_empty_hypotheses_list_raises(tmp_path):
 
     with pytest.raises(PaperSpecError, match="hypotheses"):
         load_paper_spec(path)
+
+
+def test_review_pipeline_defaults_to_qm_hypothesis(tmp_path):
+    path = tmp_path / "minimal.yaml"
+    path.write_text(
+        'title: "T"\nauthors: ["A"]\npdf: "papers/pdfs/t.pdf"\nhypotheses: ["h"]\n',
+        encoding="utf-8",
+    )
+
+    spec = load_paper_spec(path)
+
+    assert spec.review_pipeline == "qm_hypothesis"
+    assert spec.numerical_evidence is False
+
+
+def test_review_pipeline_proof_algebra_is_loaded(tmp_path):
+    path = tmp_path / "proof.yaml"
+    path.write_text(
+        'title: "T"\nauthors: ["A"]\npdf: "papers/pdfs/t.pdf"\nhypotheses: ["h"]\n'
+        "review_pipeline: proof_algebra\nnumerical_evidence: true\n",
+        encoding="utf-8",
+    )
+
+    spec = load_paper_spec(path)
+
+    assert spec.review_pipeline == "proof_algebra"
+    assert spec.numerical_evidence is True
+
+
+def test_invalid_review_pipeline_raises(tmp_path):
+    path = tmp_path / "bad.yaml"
+    path.write_text(
+        'title: "T"\nauthors: ["A"]\npdf: "papers/pdfs/t.pdf"\nhypotheses: ["h"]\n'
+        "review_pipeline: not_a_real_pipeline\n",
+        encoding="utf-8",
+    )
+
+    with pytest.raises(PaperSpecError, match="review_pipeline"):
+        load_paper_spec(path)
+
+
+@pytest.mark.parametrize("bad_value", ["true", 1, 0])
+def test_invalid_numerical_evidence_raises(tmp_path, bad_value):
+    path = tmp_path / "bad.yaml"
+    path.write_text(
+        'title: "T"\nauthors: ["A"]\npdf: "papers/pdfs/t.pdf"\nhypotheses: ["h"]\n'
+        f"numerical_evidence: {bad_value!r}\n",
+        encoding="utf-8",
+    )
+
+    with pytest.raises(PaperSpecError, match="numerical_evidence"):
+        load_paper_spec(path)
