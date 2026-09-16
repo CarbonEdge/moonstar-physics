@@ -34,7 +34,8 @@ class PaperSpec:
     # 2026-09-16-moonstar-physics-proof-verification-design.md).
     review_pipeline: str = "qm_hypothesis"
     # Only meaningful when review_pipeline == "proof_algebra" — opts into
-    # the (separate, not-yet-built) automated numerical-evidence stage.
+    # the automated numerical-evidence stage
+    # (pipelines/proof_hypothesis_numerical.yaml).
     numerical_evidence: bool = False
 
 

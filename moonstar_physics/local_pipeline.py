@@ -66,7 +66,8 @@ _LOCAL_TRANSFORMS: dict[str, Callable[[dict[str, Any], dict[str, Any], SessionCo
 
 
 # Transform types run locally for the proof_hypothesis pipeline — must
-# match proof_hypothesis.yaml's wave-1 deterministic step.
+# match proof_hypothesis.yaml's and proof_hypothesis_numerical.yaml's
+# shared wave-1 deterministic step (both pipelines use it identically).
 _PROOF_LOCAL_TRANSFORMS: dict[str, Callable[[dict[str, Any], dict[str, Any], SessionContext], Awaitable[dict[str, Any]]]] = {
     "AlgebraicClaimsCheckTransform": AlgebraicClaimsCheckTransform,
 }
@@ -359,7 +360,7 @@ async def run_proof_hypothesis_numerical(
             artifacts["synthesizer"] = await _submit_single_node(
                 client, gateway_url, token, synthesizer, wave2_input
             )
-    except NonRetryableTransformError as e:
+    except (NonRetryableTransformError, PipelineRunError) as e:
         return {
             "status": "failed",
             "session_id": session_id,

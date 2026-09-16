@@ -559,3 +559,75 @@ async def test_numerical_pipeline_propagates_not_ran_sandbox_results_without_cra
     # the DAG still ran to completion — evidence_critic decides what a
     # failed sandbox run means, local_pipeline doesn't short-circuit.
     assert [r["node"] for r in seen][-1] == "synthesizer"
+
+
+async def test_gateway_session_failure_is_caught_and_partial_artifacts_preserved():
+    # Finding 5 regression test: a gateway-submitted LLM node (reduction_a)
+    # coming back with status "failed" makes _submit_single_node raise
+    # PipelineRunError. Before the fix, run_proof_hypothesis_numerical only
+    # caught NonRetryableTransformError, so PipelineRunError propagated all
+    # the way out of this function — past local_pipeline.py entirely — and
+    # scripts/publish_review.py's _test_hypothesis caught it generically
+    # without ever writing anything to reviews/<slug>/runs/, losing the
+    # already-collected Extractor/identity_checks/proof_critic artifacts.
+    # After the fix, run_proof_hypothesis_numerical must catch it itself and
+    # return a {"status": "failed", ...} dict carrying whatever artifacts
+    # were already collected, exactly like the NonRetryableTransformError
+    # branch already does.
+    seen: list[dict] = []
+    pipeline_path, models_path = _numerical_pipeline_path()
+
+    sessions: dict[str, str] = {}
+
+    def handler(request: httpx.Request) -> httpx.Response:
+        if request.url.path == "/pipelines/run":
+            body = json.loads(request.content)
+            spec = yaml.safe_load(body["yaml_spec"])
+            node_name = spec["transforms"][0]["name"]
+            seen.append({"node": node_name, "initial_input": body["initial_input"]})
+            session_id = f"sess-{node_name}"
+            sessions[session_id] = node_name
+            return httpx.Response(200, json={"session_id": session_id})
+
+        if request.url.path.startswith("/sessions/"):
+            session_id = request.url.path.rsplit("/", 1)[-1]
+            node_name = sessions[session_id]
+            if node_name == "reduction_a":
+                return httpx.Response(200, json={"status": "failed", "session_id": session_id})
+            return httpx.Response(
+                200,
+                json={
+                    "status": "completed",
+                    "session_id": session_id,
+                    "artifacts": [
+                        {
+                            "transform_name": node_name,
+                            "data": {"response": _NUMERICAL_LLM_RESPONSES[node_name]},
+                        }
+                    ],
+                },
+            )
+
+        raise AssertionError(f"unexpected request: {request.method} {request.url}")
+
+    result = await local_pipeline.run_proof_hypothesis_numerical(
+        "does y(t) decay as claimed by the viscosity-rescaling reduction?",
+        "paper summary text",
+        "http://gateway.test",
+        "tok",
+        pipeline_path,
+        models_path,
+        transport=httpx.MockTransport(handler),
+    )
+
+    assert result["status"] == "failed"
+    assert "reduction_a" in result["error"]
+    by_name = {a["transform_name"]: a["data"] for a in result["artifacts"]}
+    # Artifacts collected before the failing node preserved for the audit trail.
+    assert "Extractor" in by_name
+    assert "identity_checks" in by_name
+    assert "proof_critic" in by_name
+    # Never got past reduction_a.
+    assert "reduction_b" not in by_name
+    assert "synthesizer" not in by_name
+    assert [r["node"] for r in seen] == ["Extractor", "proof_critic", "reduction_a"]
