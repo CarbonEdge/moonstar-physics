@@ -19,6 +19,7 @@ DimensionConsistencyTransform = "moonstar_physics.dimension_transform:DimensionC
 IdentityCheckTransform        = "moonstar_physics.maths.identity_transform:IdentityCheckTransform"
 ConjectureCheckTransform      = "moonstar_physics.maths.conjecture_transform:ConjectureCheckTransform"
 AlgebraicClaimsCheckTransform = "moonstar_physics.algebra_claims_transform:AlgebraicClaimsCheckTransform"
+NumericalExperimentTransform  = "moonstar_physics.numerical_experiment_transform:NumericalExperimentTransform"
 
 [build-system]
 requires = ["hatchling"]

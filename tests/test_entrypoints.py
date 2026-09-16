@@ -1,5 +1,6 @@
-"""Tests that the four custom transforms' `moonstar.transforms` entrypoint
-declarations in pyproject.toml resolve to real, awaitable callables.
+"""Tests that the workspace's custom transforms' `moonstar.transforms`
+entrypoint declarations in pyproject.toml resolve to real, awaitable
+callables.
 
 Previously loaded through the Python `moonstar` gateway's
 `moonstar_core.registry.ProviderRegistry` (`importlib.metadata`
@@ -21,6 +22,7 @@ _TRANSFORM_NAMES = (
     "IdentityCheckTransform",
     "ConjectureCheckTransform",
     "AlgebraicClaimsCheckTransform",
+    "NumericalExperimentTransform",
 )
 
 
@@ -29,13 +31,13 @@ def _entry_points_for_group() -> dict[str, str]:
     return {ep.name: ep.value for ep in eps}
 
 
-def test_all_four_transforms_are_declared():
+def test_all_transforms_are_declared():
     declared = _entry_points_for_group()
     for name in _TRANSFORM_NAMES:
         assert name in declared, f"{name} missing from moonstar.transforms entry points"
 
 
-def test_all_four_entrypoints_resolve_to_awaitable_callables():
+def test_all_entrypoints_resolve_to_awaitable_callables():
     eps = entry_points(group="moonstar.transforms")
     for name in _TRANSFORM_NAMES:
         matches = [ep for ep in eps if ep.name == name]
