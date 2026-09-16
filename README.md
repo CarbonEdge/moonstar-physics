@@ -40,6 +40,71 @@ in the workspace root for why. Its transforms now live under
 | `IdentityCheckTransform` | Verifies a claimed `lhs == rhs` identity via `sympy.simplify`, with numeric sampling to avoid false positives when simplify can't reduce a true identity to exactly 0. Merged in from the retired `moonstar-maths` repo. |
 | `ConjectureCheckTransform` | Fixed dispatch table: primality (`sympy.isprime`), bounded diophantine search (≤2 variables), closed-form sequence-formula evaluation. Merged in from `moonstar-maths`; not wired into any pipeline yet. |
 
+## Proof-paper review (algebra + numerical evidence)
+
+For PDE/proof-style papers (not particle-physics/QM claims), set
+`review_pipeline: proof_algebra` in `papers/<slug>.yaml` — see
+`papers/navier-stokes.yaml` for a real example. This routes through
+`pipelines/proof_hypothesis.yaml`, which checks hand-transcribed
+algebraic sub-claims symbolically via sympy instead of trying to
+evaluate the whole theorem. Each hypothesis's prose must state its
+equations explicitly, including substituting in any named quantity's
+definition (e.g. write "(1/2 + h) + (1/2 - h) = 1", not "A + D = 1"
+after separately defining A and D) — the Extractor is instructed to do
+this substitution itself, but a curator who states it explicitly gets
+more reliable results.
+
+### Numerical evidence (opt-in, `numerical_evidence: true`)
+
+Also setting `numerical_evidence: true` (only meaningful alongside
+`review_pipeline: proof_algebra`) additionally runs an automated,
+**unsupervised** numerical-evidence stage per hypothesis: an LLM derives
+a numerically tractable reduction of the claim (e.g. a self-similar
+profile ODE) **twice, independently**, writes a numpy/scipy script for
+each, and runs both in an isolated Docker container. An evidence critic
+only treats the result as usable if both independent derivations agree
+and both sandbox runs succeed and agree with each other — any
+disagreement reports `INCONCLUSIVE` rather than picking a side.
+
+**Before using this:**
+- Build the sandbox image once: `bash scripts/build_sandbox_image.sh`
+  (rebuild only if `moonstar_physics/docker/experiment-runner/Dockerfile`
+  changes — not rebuilt automatically per run).
+- Docker must be running and on `PATH`.
+- This roughly triples the LLM cost per hypothesis versus Phase 1 alone
+  (two independent derivation + codegen calls, one evidence critique)
+  plus container spin-up latency — `proof_hypothesis_numerical.yaml`'s
+  budget is `max_usd: 3.00` / `max_wallclock_seconds: 600` per hypothesis.
+- **Nothing here is proof.** Numerical evidence only ever corroborates or
+  contradicts the symbolic algebra check — it can never by itself flip a
+  verdict to PLAUSIBLE, and it is inherently unreliable for
+  singularity/blowup phenomena (an under-resolved grid can mimic real
+  blowup). Every derivation, generated script, and raw sandbox
+  stdout/exit code is persisted to `reviews/<slug>/runs/<session_id>.json`
+  regardless of outcome — read it before trusting a PLAUSIBLE verdict
+  that leaned on numerical corroboration.
+- The sandbox itself is isolated (`--network none`, capped memory/CPU/
+  pids, read-only filesystem, wall-clock timeout) but this still executes
+  LLM-generated code completely unsupervised — treat `numerical_evidence`
+  as a deliberate, higher-risk opt-in per paper, not a default.
+
+### Manual end-to-end sandbox test (not part of the default test suite)
+
+```bash
+bash scripts/build_sandbox_image.sh
+python -c "
+import asyncio, json
+from moonstar_physics.numerical_experiment_transform import NumericalExperimentTransform
+from moonstar_physics._compat import SessionContext
+
+code = 'print(\"RESULT: {\\\"ok\\\": true}\")'
+input_ = {'experiment_codegen_a': {'response': json.dumps({'code': code})}}
+result = asyncio.run(NumericalExperimentTransform(input_, {}, SessionContext()))
+print(result)
+"
+```
+Expected output: `{'ran': True, 'result': {'ok': True}, ...}`.
+
 ## Usage
 
 ```bash
