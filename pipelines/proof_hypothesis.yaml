@@ -56,6 +56,16 @@ transforms:
           "variables" if the text never gives it a concrete definition
           (a genuinely free variable, e.g. "h" or "n" ranging over all
           values).
+        - CRITICAL: a defining assignment (e.g. "A = 1/2 + h" introducing
+          the name A) is NOT itself a claim to check — it is notation
+          the text is establishing, not an identity to verify. Do NOT
+          emit an algebraic_claims entry with lhs "A" and rhs "1/2 + h"
+          (or any entry that just restates one definition on its own).
+          Only emit entries for equations that USE one or more
+          already-defined names in a further relationship (after
+          substituting those definitions in, per the rule above). If a
+          hypothesis states nothing but bare definitions with no further
+          equation relating them, return an empty algebraic_claims list.
         - Use standard sympy syntax: "**" for exponents, "Rational(a, b)"
           for exact fractions (never decimals like "0.5" for a claim that
           depends on exactness), explicit "*" for multiplication.
