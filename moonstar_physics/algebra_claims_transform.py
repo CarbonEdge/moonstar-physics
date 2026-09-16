@@ -46,7 +46,13 @@ async def AlgebraicClaimsCheckTransform(
     checked: list[dict[str, Any]] = []
     for claim in claims:
         if not isinstance(claim, dict):
-            checked.append({"description": "<malformed claim entry>", "verdict": "not_applicable"})
+            checked.append(
+                {
+                    "description": "<malformed claim entry>",
+                    "verdict": "not_applicable",
+                    "detail": "claim entry is not an object",
+                }
+            )
             continue
 
         description = claim.get("description") or "<no description>"
@@ -65,7 +71,12 @@ async def AlgebraicClaimsCheckTransform(
             }
         }
         result = await IdentityCheckTransform(synthetic_input, {}, ctx)
-        checked.append({"description": description, "verdict": result["verdict"]})
+        checked.append(
+            {
+                "description": description,
+                **{k: v for k, v in result.items() if not k.startswith("_")},
+            }
+        )
 
     verdicts = [c["verdict"] for c in checked]
     if "violated" in verdicts:
