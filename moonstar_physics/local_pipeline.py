@@ -43,6 +43,7 @@ import httpx
 
 from ._compat import NonRetryableTransformError, SessionContext
 from ._pipeline_spec import PipelineSpec, TransformSpec
+from .algebra_claims_transform import AlgebraicClaimsCheckTransform
 from .conservation_transform import ConservationLawCheckTransform
 from .dimension_transform import DimensionConsistencyTransform
 from .qm_calc_transform import QMCalculationTransform
@@ -60,6 +61,13 @@ _LOCAL_TRANSFORMS: dict[str, Callable[[dict[str, Any], dict[str, Any], SessionCo
     "QMCalculationTransform": QMCalculationTransform,
     "ReferenceDataLookupTransform": ReferenceDataLookupTransform,
     "DimensionConsistencyTransform": DimensionConsistencyTransform,
+}
+
+
+# Transform types run locally for the proof_hypothesis pipeline — must
+# match proof_hypothesis.yaml's wave-1 deterministic step.
+_PROOF_LOCAL_TRANSFORMS: dict[str, Callable[[dict[str, Any], dict[str, Any], SessionContext], Awaitable[dict[str, Any]]]] = {
+    "AlgebraicClaimsCheckTransform": AlgebraicClaimsCheckTransform,
 }
 
 
@@ -167,6 +175,74 @@ async def run_physics_hypothesis(
             theory_critic = transforms["theory_critic"]
             artifacts["theory_critic"] = await _submit_single_node(
                 client, gateway_url, token, theory_critic, extractor_input
+            )
+
+            devils_advocate = transforms["devils_advocate"]
+            wave1_input = {dep: artifacts[dep] for dep in devils_advocate.deps}
+            artifacts["devils_advocate"] = await _submit_single_node(
+                client, gateway_url, token, devils_advocate, wave1_input
+            )
+
+            synthesizer = transforms["synthesizer"]
+            wave2_input = {dep: artifacts[dep] for dep in synthesizer.deps}
+            artifacts["synthesizer"] = await _submit_single_node(
+                client, gateway_url, token, synthesizer, wave2_input
+            )
+    except NonRetryableTransformError as e:
+        return {
+            "status": "failed",
+            "session_id": session_id,
+            "error": str(e),
+            "artifacts": [
+                {"transform_name": name, "data": data} for name, data in artifacts.items()
+            ],
+        }
+
+    return {
+        "status": "completed",
+        "session_id": session_id,
+        "artifacts": [{"transform_name": name, "data": data} for name, data in artifacts.items()],
+    }
+
+
+async def run_proof_hypothesis(
+    hypothesis: str,
+    gateway_url: str,
+    token: str,
+    pipeline_path: Path,
+    models_path: Path,
+    transport: httpx.BaseTransport | None = None,
+) -> dict[str, Any]:
+    """Runs proof_hypothesis.yaml's Extractor -> identity_checks/proof_critic
+    -> devils_advocate -> synthesizer DAG, LLM steps against `gateway_url`,
+    the deterministic algebra check in-process. Same shape/contract as
+    run_physics_hypothesis — see that function's docstring for why this
+    can't just submit the whole YAML to the gateway as one session.
+    """
+    from ._pipeline_spec import render_pipeline_yaml
+
+    text = render_pipeline_yaml(pipeline_path, models_path)
+    spec = PipelineSpec.from_yaml_text(text)
+    transforms = spec.by_name()
+    artifacts: dict[str, dict[str, Any]] = {}
+    session_id = f"local-{uuid.uuid4().hex[:12]}"
+
+    try:
+        async with httpx.AsyncClient(timeout=30.0, transport=transport) as client:
+            extractor = transforms["Extractor"]
+            artifacts["Extractor"] = await _submit_single_node(
+                client, gateway_url, token, extractor, {"hypothesis": hypothesis}
+            )
+
+            extractor_input = {"Extractor": artifacts["Extractor"]}
+
+            for name, fn in _PROOF_LOCAL_TRANSFORMS.items():
+                node = next(t for t in transforms.values() if t.type == name)
+                artifacts[node.name] = await fn(extractor_input, node.config, _DUMMY_CTX)
+
+            proof_critic = transforms["proof_critic"]
+            artifacts["proof_critic"] = await _submit_single_node(
+                client, gateway_url, token, proof_critic, extractor_input
             )
 
             devils_advocate = transforms["devils_advocate"]

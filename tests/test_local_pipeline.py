@@ -194,3 +194,150 @@ async def test_malformed_extractor_output_fails_locally_without_calling_gateway_
     # Only Extractor was submitted — the DAG stopped before theory_critic/
     # devils_advocate/synthesizer ever reached the gateway.
     assert seen == ["Extractor"]
+
+
+_PROOF_EXTRACTOR_RESPONSE = json.dumps(
+    {
+        "proof_context": "Testing whether the paper's own definitions A = 1/2+h and D = 1/2-h sum to 1.",
+        "algebraic_claims": [
+            {
+                "description": "A + D sums to 1",
+                "lhs": "(Rational(1,2)+h)+(Rational(1,2)-h)",
+                "rhs": "1",
+                "variables": ["h"],
+            }
+        ],
+    }
+)
+
+_PROOF_LLM_RESPONSES = {
+    "Extractor": _PROOF_EXTRACTOR_RESPONSE,
+    "proof_critic": json.dumps(
+        {"algebra_sufficient_if_verified": True, "logical_gap": "none", "assessment": "the claim is a direct algebraic consequence"}
+    ),
+    "devils_advocate": json.dumps(
+        {
+            "agreement": "identity_checks and proof_critic agree",
+            "contradiction": "none",
+            "coverage_gaps": [],
+            "strongest_objection": "none",
+        }
+    ),
+    "synthesizer": "VERDICT: PLAUSIBLE\n\nThe transcribed algebra checks out.",
+}
+
+
+def _proof_pipeline_path():
+    from pathlib import Path
+
+    root = Path(__file__).parent.parent
+    return root / "pipelines" / "proof_hypothesis.yaml", root / "pipelines" / "models.json"
+
+
+def _proof_mock_transport(seen_requests: list[dict]):
+    sessions: dict[str, str] = {}
+
+    def handler(request: httpx.Request) -> httpx.Response:
+        if request.url.path == "/pipelines/run":
+            body = json.loads(request.content)
+            spec = yaml.safe_load(body["yaml_spec"])
+            node_name = spec["transforms"][0]["name"]
+            seen_requests.append({"node": node_name, "initial_input": body["initial_input"]})
+            session_id = f"sess-{node_name}"
+            sessions[session_id] = node_name
+            return httpx.Response(200, json={"session_id": session_id})
+
+        if request.url.path.startswith("/sessions/"):
+            session_id = request.url.path.rsplit("/", 1)[-1]
+            node_name = sessions[session_id]
+            return httpx.Response(
+                200,
+                json={
+                    "status": "completed",
+                    "session_id": session_id,
+                    "artifacts": [
+                        {
+                            "transform_name": node_name,
+                            "data": {"response": _PROOF_LLM_RESPONSES[node_name]},
+                        }
+                    ],
+                },
+            )
+
+        raise AssertionError(f"unexpected request: {request.method} {request.url}")
+
+    return httpx.MockTransport(handler)
+
+
+async def test_proof_dag_wires_llm_steps_to_gateway_and_checks_locally():
+    seen: list[dict] = []
+    pipeline_path, models_path = _proof_pipeline_path()
+
+    result = await local_pipeline.run_proof_hypothesis(
+        "the paper defines A = 1/2+h and D = 1/2-h; do they sum to 1?",
+        "http://gateway.test",
+        "tok",
+        pipeline_path,
+        models_path,
+        transport=_proof_mock_transport(seen),
+    )
+
+    assert result["status"] == "completed"
+    by_name = {a["transform_name"]: a["data"] for a in result["artifacts"]}
+
+    assert [r["node"] for r in seen] == ["Extractor", "proof_critic", "devils_advocate", "synthesizer"]
+
+    # identity_checks ran locally — never touched the mock transport.
+    assert by_name["identity_checks"]["verdict"] == "consistent"
+
+    # proof_critic received exactly the Extractor artifact as its input.
+    assert seen[1]["initial_input"] == {"Extractor": {"response": _PROOF_EXTRACTOR_RESPONSE}}
+
+    # devils_advocate received both wave-1 outputs.
+    assert set(seen[2]["initial_input"].keys()) == {"identity_checks", "proof_critic"}
+
+    # synthesizer received all 3 prior outputs.
+    assert set(seen[3]["initial_input"].keys()) == {"identity_checks", "proof_critic", "devils_advocate"}
+
+    assert by_name["synthesizer"]["response"].startswith("VERDICT: PLAUSIBLE")
+
+
+async def test_proof_pipeline_with_no_stated_equations_is_not_applicable_but_completes():
+    seen: list[dict] = []
+    pipeline_path, models_path = _proof_pipeline_path()
+
+    responses = dict(_PROOF_LLM_RESPONSES)
+    responses["Extractor"] = json.dumps({"proof_context": "pure prose, no equations", "algebraic_claims": []})
+
+    def handler(request: httpx.Request) -> httpx.Response:
+        if request.url.path == "/pipelines/run":
+            body = json.loads(request.content)
+            spec = yaml.safe_load(body["yaml_spec"])
+            node_name = spec["transforms"][0]["name"]
+            seen.append(node_name)
+            return httpx.Response(200, json={"session_id": f"sess-{node_name}"})
+        if request.url.path.startswith("/sessions/"):
+            node_name = request.url.path.rsplit("/", 1)[-1].removeprefix("sess-")
+            return httpx.Response(
+                200,
+                json={
+                    "status": "completed",
+                    "artifacts": [{"transform_name": node_name, "data": {"response": responses[node_name]}}],
+                },
+            )
+        raise AssertionError(f"unexpected request: {request.url}")
+
+    result = await local_pipeline.run_proof_hypothesis(
+        "pure prose hypothesis with no equations",
+        "http://gateway.test",
+        "tok",
+        pipeline_path,
+        models_path,
+        transport=httpx.MockTransport(handler),
+    )
+
+    assert result["status"] == "completed"
+    by_name = {a["transform_name"]: a["data"] for a in result["artifacts"]}
+    assert by_name["identity_checks"]["verdict"] == "not_applicable"
+    # the DAG still ran to completion — a not_applicable check isn't a failure.
+    assert seen == ["Extractor", "proof_critic", "devils_advocate", "synthesizer"]
