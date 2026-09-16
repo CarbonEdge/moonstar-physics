@@ -118,3 +118,26 @@ def test_budget_is_raised_for_the_numerical_stage():
     data = yaml.safe_load(_PIPELINE_PATH.read_text(encoding="utf-8"))
     assert data["budget"]["max_usd"] == 3.00
     assert data["budget"]["max_wallclock_seconds"] == 600
+
+
+def test_extractor_never_invent_rule_matches_proof_hypothesis_yaml():
+    # Regression guard: this rule was hardened in proof_hypothesis.yaml after
+    # a real live-run failure; the two sibling pipelines' Extractor prompts
+    # must not silently re-diverge on this specific rule.
+    numerical_text = _PIPELINE_PATH.read_text(encoding="utf-8")
+    sibling_path = _PIPELINE_PATH.parent / "proof_hypothesis.yaml"
+    sibling_text = sibling_path.read_text(encoding="utf-8")
+
+    def _extract_rule(text: str) -> str:
+        marker = "CRITICAL: never invent a sub-derivation"
+        start = text.index(marker)
+        # the rule block ends at the next "- CRITICAL" or "- Use standard sympy syntax" bullet
+        end_markers = ["\n        - Use standard sympy syntax", "\n        - CRITICAL: never invent a sub-derivation"]
+        end = len(text)
+        for m in end_markers:
+            idx = text.find(m, start + len(marker))
+            if idx != -1:
+                end = min(end, idx)
+        return text[start:end]
+
+    assert _extract_rule(numerical_text) == _extract_rule(sibling_text)
