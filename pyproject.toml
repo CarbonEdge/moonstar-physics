@@ -18,6 +18,7 @@ ReferenceDataLookupTransform  = "moonstar_physics.reference_lookup_transform:Ref
 DimensionConsistencyTransform = "moonstar_physics.dimension_transform:DimensionConsistencyTransform"
 IdentityCheckTransform        = "moonstar_physics.maths.identity_transform:IdentityCheckTransform"
 ConjectureCheckTransform      = "moonstar_physics.maths.conjecture_transform:ConjectureCheckTransform"
+AlgebraicClaimsCheckTransform = "moonstar_physics.algebra_claims_transform:AlgebraicClaimsCheckTransform"
 
 [build-system]
 requires = ["hatchling"]

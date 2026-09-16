@@ -20,6 +20,7 @@ _TRANSFORM_NAMES = (
     "DimensionConsistencyTransform",
     "IdentityCheckTransform",
     "ConjectureCheckTransform",
+    "AlgebraicClaimsCheckTransform",
 )
 
 
