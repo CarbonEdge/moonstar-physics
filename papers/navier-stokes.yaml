@@ -15,6 +15,15 @@ words_per_chunk: 4500
 # hand-transcribed algebraic sub-claims. See
 # docs/superpowers/specs/2026-09-16-moonstar-physics-proof-verification-design.md.
 review_pipeline: proof_algebra
+# Hypothesis 3's real content -- the v(y,t) = nu^(-1/2) v_nu(sqrt(nu)*y, t)
+# scaling relation itself -- is a function application, not a bare
+# algebraic identity, so identity_checks can never parse it (confirmed
+# live: it comes back not_applicable every run). Phase 2's automated
+# numerical-evidence stage runs on all 3 hypotheses when this is true;
+# for hypotheses 1/2 (pure arithmetic, no real phenomenon) the LLM will
+# likely report "no tractable reduction found" -- a valid, honest, cheap
+# outcome, not wasted spend.
+numerical_evidence: true
 hypotheses:
   - "The paper's parameter table (page 14, preceding equation (4.1)) fixes a small exponent h and defines the tangential-velocity growth exponent A = 1/2 + h and the axial-length exponent D = 1/2 − h, both used throughout the self-similar profile construction. These two definitions must sum to exactly 1: A + D = 1."
   - "Equation (5.1) writes the pressure coefficient profile as p_n = q^(-2A+λn) * Π_n, using the radial-mode exponent λ_n = 2*n*h from the parameter table together with A = 1/2 + h from the same table. Substituting these two definitions, the combined exponent -2*A + λ_n must simplify to exactly -1 + 2*h*(n-1)."
