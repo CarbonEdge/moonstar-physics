@@ -80,7 +80,11 @@ def safe_parse_expr(text: str, variables: list[str]) -> sympy.Expr:
             transformations=standard_transformations,
             evaluate=True,
         )
-    except (SyntaxError, TypeError, ValueError, AttributeError, KeyError) as e:
+    except (SyntaxError, TypeError, ValueError, AttributeError, KeyError, NameError) as e:
+        # NameError specifically covers a name immediately followed by "(...)"
+        # (e.g. "v(y, t)") — sympy's parser resolves that as Function('v')(y, t),
+        # but "Function" is deliberately absent from _SAFE_GLOBALS, so plain
+        # eval() raises NameError rather than returning a usable expression.
         raise UnsafeExpressionError(f"failed to parse expression: {e}") from e
 
     if not isinstance(expr, sympy.Basic):

@@ -78,3 +78,14 @@ def test_over_complexity_expression_rejected():
     terms = " + ".join(f"x**{i}" for i in range(1, 250))
     with pytest.raises(UnsafeExpressionError):
         safe_parse_expr(terms, ["x"])
+
+
+def test_function_call_notation_rejected_not_crashed():
+    # A name immediately followed by "(...)" (e.g. an LLM writing physics
+    # notation like "v(y, t)") makes sympy's parser attempt
+    # Function('v')(y, t) — but "Function" is deliberately absent from the
+    # sandboxed globals, so plain eval() raises NameError. This must degrade
+    # to the same UnsafeExpressionError every other rejection path uses,
+    # never propagate as an uncaught NameError that crashes the caller.
+    with pytest.raises(UnsafeExpressionError):
+        safe_parse_expr("v(y, t)", ["y", "t"])
