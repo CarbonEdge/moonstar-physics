@@ -16,6 +16,8 @@ ConservationLawCheckTransform = "moonstar_physics.conservation_transform:Conserv
 QMCalculationTransform        = "moonstar_physics.qm_calc_transform:QMCalculationTransform"
 ReferenceDataLookupTransform  = "moonstar_physics.reference_lookup_transform:ReferenceDataLookupTransform"
 DimensionConsistencyTransform = "moonstar_physics.dimension_transform:DimensionConsistencyTransform"
+IdentityCheckTransform        = "moonstar_physics.maths.identity_transform:IdentityCheckTransform"
+ConjectureCheckTransform      = "moonstar_physics.maths.conjecture_transform:ConjectureCheckTransform"
 
 [build-system]
 requires = ["hatchling"]

@@ -24,12 +24,21 @@ the worker runs in.
 
 ## Transforms
 
+`moonstar-maths` (a former standalone sibling repo for symbolic-math
+claims) was merged into this package on 2026-09-16 rather than fixed
+standalone — see
+`docs/superpowers/specs/2026-09-16-moonstar-physics-proof-verification-design.md`
+in the workspace root for why. Its transforms now live under
+`moonstar_physics/maths/`.
+
 | Type | What it does |
 |---|---|
 | `ConservationLawCheckTransform` | Charge, baryon number, per-flavor lepton number (exact, via sympy.Rational), and a rest-mass-energy threshold check |
 | `QMCalculationTransform` | Closed-form energy-level/uncertainty calculations for infinite well, harmonic oscillator, hydrogen-like levels |
 | `ReferenceDataLookupTransform` | Looks up particle properties from the bundled `data/particles.json` |
 | `DimensionConsistencyTransform` | Checks fiber-bundle total-space dimensions and Spin(n) spinor representation dimensions against closed-form formulas |
+| `IdentityCheckTransform` | Verifies a claimed `lhs == rhs` identity via `sympy.simplify`, with numeric sampling to avoid false positives when simplify can't reduce a true identity to exactly 0. Merged in from the retired `moonstar-maths` repo. |
+| `ConjectureCheckTransform` | Fixed dispatch table: primality (`sympy.isprime`), bounded diophantine search (≤2 variables), closed-form sequence-formula evaluation. Merged in from `moonstar-maths`; not wired into any pipeline yet. |
 
 ## Usage
 

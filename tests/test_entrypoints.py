@@ -18,6 +18,8 @@ _TRANSFORM_NAMES = (
     "QMCalculationTransform",
     "ReferenceDataLookupTransform",
     "DimensionConsistencyTransform",
+    "IdentityCheckTransform",
+    "ConjectureCheckTransform",
 )
 
 
