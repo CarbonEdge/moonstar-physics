@@ -15,6 +15,7 @@ from __future__ import annotations
 import json
 import subprocess
 import tempfile
+import uuid
 from pathlib import Path
 from typing import Any
 
@@ -22,6 +23,13 @@ from ._compat import SessionContext
 
 _IMAGE_NAME = "moonstar-physics-experiment-runner"
 _DEFAULT_TIMEOUT_SECONDS = 60
+_MAX_STDOUT_CHARS = 65536  # ~64KB cap on captured sandbox stdout stored/forwarded downstream
+
+
+def _truncate_stdout(stdout: str) -> str:
+    if len(stdout) <= _MAX_STDOUT_CHARS:
+        return stdout
+    return stdout[:_MAX_STDOUT_CHARS] + f"\n...[truncated, original length {len(stdout)} chars]"
 
 
 def _not_ran(detail: str, stdout: str = "", exit_code: int | None = None) -> dict[str, Any]:
@@ -95,9 +103,12 @@ async def NumericalExperimentTransform(
         f.write(code)
         script_path = f.name
 
+    container_name = f"moonstar-exp-{uuid.uuid4().hex[:12]}"
+
     try:
         docker_cmd = [
             "docker", "run", "--rm",
+            "--name", container_name,
             "--network", "none",
             "--memory", "512m",
             "--cpus", "1",
@@ -110,11 +121,22 @@ async def NumericalExperimentTransform(
         ]
         try:
             proc = subprocess.run(
-                docker_cmd, capture_output=True, text=True, timeout=timeout_seconds
+                docker_cmd,
+                capture_output=True,
+                text=True,
+                encoding="utf-8",
+                errors="replace",
+                timeout=timeout_seconds,
             )
         except subprocess.TimeoutExpired as e:
             stdout = e.stdout if isinstance(e.stdout, str) else ""
-            return _not_ran(f"sandbox run exceeded {timeout_seconds}s timeout", stdout=stdout)
+            try:
+                subprocess.run(["docker", "rm", "-f", container_name], capture_output=True, timeout=10)
+            except (subprocess.SubprocessError, OSError):
+                pass
+            return _not_ran(
+                f"sandbox run exceeded {timeout_seconds}s timeout", stdout=_truncate_stdout(stdout)
+            )
         except OSError as e:
             return _not_ran(f"failed to invoke docker: {e}")
     finally:
@@ -122,20 +144,24 @@ async def NumericalExperimentTransform(
 
     if proc.returncode != 0:
         return _not_ran(
-            f"sandbox exited with code {proc.returncode}", stdout=proc.stdout, exit_code=proc.returncode
+            f"sandbox exited with code {proc.returncode}",
+            stdout=_truncate_stdout(proc.stdout),
+            exit_code=proc.returncode,
         )
 
     result = _parse_result_line(proc.stdout)
     if result is None:
         return _not_ran(
-            "no valid RESULT: line in sandbox stdout", stdout=proc.stdout, exit_code=proc.returncode
+            "no valid RESULT: line in sandbox stdout",
+            stdout=_truncate_stdout(proc.stdout),
+            exit_code=proc.returncode,
         )
 
     return {
         "ran": True,
         "result": result,
         "detail": None,
-        "stdout": proc.stdout,
+        "stdout": _truncate_stdout(proc.stdout),
         "exit_code": proc.returncode,
         "_model": "none",
         "_provider": "none",
