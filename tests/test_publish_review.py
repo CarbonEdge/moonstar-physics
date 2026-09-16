@@ -135,3 +135,65 @@ async def test_test_hypothesis_routes_to_proof_pipeline_when_requested(tmp_path,
     assert called_pipeline_path.name == "proof_hypothesis.yaml"
     assert result.verdict == "PLAUSIBLE"
     assert result.wave1_results == {"identity_checks": {"verdict": "consistent"}}
+
+
+async def test_test_hypothesis_routes_to_numerical_pipeline_when_requested(tmp_path, monkeypatch):
+    monkeypatch.setattr(publish_review, "_REVIEWS_DIR", tmp_path / "reviews")
+    mock_run = AsyncMock(
+        return_value={
+            "status": "completed",
+            "session_id": "numerical-1",
+            "artifacts": [
+                {"transform_name": "identity_checks", "data": {"verdict": "consistent"}},
+                {"transform_name": "evidence_critic", "data": {"verdict": "corroborates"}},
+                {"transform_name": "synthesizer", "data": {"response": "VERDICT: PLAUSIBLE\n\nchecks out"}},
+            ],
+        }
+    )
+
+    with patch.object(publish_review.local_pipeline, "run_proof_hypothesis_numerical", mock_run):
+        result = await publish_review._test_hypothesis(
+            client=None, gateway_url="http://x", token="t", slug="paper-slug",
+            hypothesis="some hypothesis", index=1,
+            review_pipeline="proof_algebra", numerical_evidence=True, paper_summary="a summary",
+        )
+
+    mock_run.assert_awaited_once()
+    called_args = mock_run.await_args.args
+    assert called_args[0] == "some hypothesis"
+    assert called_args[1] == "a summary"
+    called_pipeline_path = mock_run.await_args.args[4]
+    assert called_pipeline_path.name == "proof_hypothesis_numerical.yaml"
+    assert result.verdict == "PLAUSIBLE"
+    assert result.wave1_results == {
+        "identity_checks": {"verdict": "consistent"},
+        "evidence_critic": {"verdict": "corroborates"},
+    }
+
+
+async def test_test_hypothesis_defaults_numerical_evidence_to_false(tmp_path, monkeypatch):
+    # numerical_evidence=True is meaningless without review_pipeline="proof_algebra"
+    # and must never be passed by a caller that only sets review_pipeline
+    # to "proof_algebra" without opting in — the default keeps existing
+    # proof_algebra callers (from the Phase 1 plan's own tests) on the
+    # non-numerical path.
+    monkeypatch.setattr(publish_review, "_REVIEWS_DIR", tmp_path / "reviews")
+    mock_run = AsyncMock(
+        return_value={
+            "status": "completed",
+            "session_id": "proof-1",
+            "artifacts": [
+                {"transform_name": "identity_checks", "data": {"verdict": "consistent"}},
+                {"transform_name": "synthesizer", "data": {"response": "VERDICT: PLAUSIBLE\n\nchecks out"}},
+            ],
+        }
+    )
+
+    with patch.object(publish_review.local_pipeline, "run_proof_hypothesis", mock_run):
+        result = await publish_review._test_hypothesis(
+            client=None, gateway_url="http://x", token="t", slug="paper-slug",
+            hypothesis="some hypothesis", index=1, review_pipeline="proof_algebra",
+        )
+
+    mock_run.assert_awaited_once()
+    assert result.verdict == "PLAUSIBLE"

@@ -64,6 +64,7 @@ _AUTHOR_PATH = _ROOT_DIR / "scienceopen_author.json"
 
 _WAVE1_TRANSFORM_NAMES = ["conservation_check", "qm_calculation", "reference_lookup", "dimension_check"]
 _PROOF_WAVE1_TRANSFORM_NAMES = ["identity_checks"]
+_PROOF_NUMERICAL_WAVE1_TRANSFORM_NAMES = ["identity_checks", "evidence_critic"]
 
 
 def _extract_pdf_text(pdf_path: Path) -> str:
@@ -143,24 +144,37 @@ async def _test_hypothesis(
     hypothesis: str,
     index: int,
     review_pipeline: str = "qm_hypothesis",
+    numerical_evidence: bool = False,
+    paper_summary: str = "",
 ) -> HypothesisResult:
-    # physics_hypothesis.yaml and proof_hypothesis.yaml both mix LlmTransform
-    # steps (dispatched to the gateway) with deterministic transform types
-    # moonstar-rs has no way to run (see local_pipeline module docstring) —
-    # so this walks the appropriate DAG locally rather than submitting the
-    # whole YAML as one session.
+    # physics_hypothesis.yaml, proof_hypothesis.yaml, and
+    # proof_hypothesis_numerical.yaml all mix LlmTransform steps
+    # (dispatched to the gateway) with deterministic transform types
+    # moonstar-rs has no way to run (see local_pipeline module docstring)
+    # — so this walks the appropriate DAG locally rather than submitting
+    # the whole YAML as one session.
     print(f"Testing hypothesis {index}: {hypothesis[:70]}...")
-    if review_pipeline == "proof_algebra":
-        run_fn = local_pipeline.run_proof_hypothesis
-        pipeline_path = _PIPELINES_DIR / "proof_hypothesis.yaml"
-        wave1_names = _PROOF_WAVE1_TRANSFORM_NAMES
-    else:
-        run_fn = local_pipeline.run_physics_hypothesis
-        pipeline_path = _PIPELINES_DIR / "physics_hypothesis.yaml"
-        wave1_names = _WAVE1_TRANSFORM_NAMES
-
     try:
-        status = await run_fn(hypothesis, gateway_url, token, pipeline_path, _MODELS_PATH)
+        if review_pipeline == "proof_algebra" and numerical_evidence:
+            status = await local_pipeline.run_proof_hypothesis_numerical(
+                hypothesis,
+                paper_summary,
+                gateway_url,
+                token,
+                _PIPELINES_DIR / "proof_hypothesis_numerical.yaml",
+                _MODELS_PATH,
+            )
+            wave1_names = _PROOF_NUMERICAL_WAVE1_TRANSFORM_NAMES
+        elif review_pipeline == "proof_algebra":
+            status = await local_pipeline.run_proof_hypothesis(
+                hypothesis, gateway_url, token, _PIPELINES_DIR / "proof_hypothesis.yaml", _MODELS_PATH
+            )
+            wave1_names = _PROOF_WAVE1_TRANSFORM_NAMES
+        else:
+            status = await local_pipeline.run_physics_hypothesis(
+                hypothesis, gateway_url, token, _PIPELINES_DIR / "physics_hypothesis.yaml", _MODELS_PATH
+            )
+            wave1_names = _WAVE1_TRANSFORM_NAMES
     except (httpx.HTTPError, PipelineRunError, local_pipeline.PipelineRunError) as exc:
         return HypothesisResult(hypothesis=hypothesis, verdict="ERROR", writeup=str(exc), wave1_results={}, run_path=None)
 
@@ -217,7 +231,10 @@ async def _publish(slug: str) -> int:
 
         hypothesis_results = [
             await _test_hypothesis(
-                client, gateway_url, token, slug, hypothesis, i, review_pipeline=spec.review_pipeline
+                client, gateway_url, token, slug, hypothesis, i,
+                review_pipeline=spec.review_pipeline,
+                numerical_evidence=spec.numerical_evidence,
+                paper_summary=summary,
             )
             for i, hypothesis in enumerate(spec.hypotheses, start=1)
         ]
