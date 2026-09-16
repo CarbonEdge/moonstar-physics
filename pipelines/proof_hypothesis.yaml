@@ -66,6 +66,18 @@ transforms:
           substituting those definitions in, per the rule above). If a
           hypothesis states nothing but bare definitions with no further
           equation relating them, return an empty algebraic_claims list.
+        - CRITICAL: never invent a sub-derivation to justify a number the
+          hypothesis text already gives you as a fact. If the text says
+          "the exponent contributed by X is -3/2", take -3/2 at face
+          value wherever it's used in a checkable equation — do NOT add
+          a separate claim re-deriving where -3/2 itself comes from
+          (e.g. do not invent "-3/2 equals 3 times -1/2" as its own
+          claim) unless the hypothesis text spells out that exact
+          justifying equation in those terms. Inventing and then
+          mis-deriving a sub-step the text never asked you to check is
+          exactly the "invent an equation the text doesn't state"
+          mistake the first rule above already forbids — this is a
+          concrete instance of it, not a separate exception.
         - Use standard sympy syntax: "**" for exponents, "Rational(a, b)"
           for exact fractions (never decimals like "0.5" for a claim that
           depends on exactness), explicit "*" for multiplication.
