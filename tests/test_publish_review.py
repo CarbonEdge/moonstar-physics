@@ -109,3 +109,29 @@ async def test_test_hypothesis_returns_error_verdict_on_non_completed_status(tmp
     assert result.run_path == "runs/abc.json"
     run_file = tmp_path / "reviews" / "paper-slug" / "runs" / "abc.json"
     assert run_file.exists()
+
+
+async def test_test_hypothesis_routes_to_proof_pipeline_when_requested(tmp_path, monkeypatch):
+    monkeypatch.setattr(publish_review, "_REVIEWS_DIR", tmp_path / "reviews")
+    mock_run = AsyncMock(
+        return_value={
+            "status": "completed",
+            "session_id": "proof-1",
+            "artifacts": [
+                {"transform_name": "identity_checks", "data": {"verdict": "consistent"}},
+                {"transform_name": "synthesizer", "data": {"response": "VERDICT: PLAUSIBLE\n\nchecks out"}},
+            ],
+        }
+    )
+
+    with patch.object(publish_review.local_pipeline, "run_proof_hypothesis", mock_run):
+        result = await publish_review._test_hypothesis(
+            client=None, gateway_url="http://x", token="t", slug="paper-slug",
+            hypothesis="some hypothesis", index=1, review_pipeline="proof_algebra",
+        )
+
+    mock_run.assert_awaited_once()
+    called_pipeline_path = mock_run.await_args.args[3]
+    assert called_pipeline_path.name == "proof_hypothesis.yaml"
+    assert result.verdict == "PLAUSIBLE"
+    assert result.wave1_results == {"identity_checks": {"verdict": "consistent"}}
