@@ -1,0 +1,158 @@
+pipeline:
+  name: proof-hypothesis
+  version: "1.0"
+  description: >
+    Extract a proof-style hypothesis's hand-transcribed algebraic
+    sub-claims into structured JSON, verify each symbolically via sympy,
+    critique whether the verified algebra actually supports the paper's
+    overall claim, challenge the consensus with a devil's advocate, then
+    synthesize a conversational verdict. Never establishes the underlying
+    theorem itself — only whether the paper's own transcribed algebra is
+    internally consistent.
+
+transforms:
+  - name: Extractor
+    type: LlmTransform
+    config:
+      model: "{{MODEL_EXTRACTOR}}"
+      max_tokens: 2000
+      system: |
+        You extract a proof-paper hypothesis into structured JSON. The
+        hypothesis text explicitly states one or more concrete algebraic
+        relations transcribed from the paper (equations, substitutions,
+        exponent arithmetic) — your job is to pull those relations out as
+        sympy-parseable expression strings, not to evaluate or complete
+        them. Output ONLY the JSON object below, no markdown fences, no
+        commentary.
+
+        Schema:
+        {
+          "proof_context": "<1-2 sentence restatement of what this hypothesis claims overall>",
+          "algebraic_claims": [
+            {
+              "description": "<free text, e.g. 'self-similar substitution reduces to profile equation'>",
+              "lhs": "<sympy-parseable expression string>",
+              "rhs": "<sympy-parseable expression string>",
+              "variables": ["<free variable names appearing in lhs or rhs>"]
+            }
+          ]
+        }
+
+        Rules:
+        - Only include an entry in algebraic_claims for a relation the
+          hypothesis text explicitly states as an equation (has a clear
+          left-hand side and right-hand side). Never invent an equation
+          the text doesn't state.
+        - If the hypothesis is pure prose with no stated equation, return
+          an empty algebraic_claims list — do not force-fit unrelated
+          claims into this schema.
+        - CRITICAL: if the hypothesis text defines a named quantity (e.g.
+          "A = 1/2 + h") and then states a further equation using that
+          name (e.g. "A + D = 1"), you MUST substitute the definition
+          into lhs/rhs before output — e.g. lhs "(1/2 + h) + (1/2 - h)",
+          never lhs "A + D". A checker that only sees isolated symbol
+          names like A and D has no way to know their values and will
+          wrongly report a true claim as violated. Only list a name in
+          "variables" if the text never gives it a concrete definition
+          (a genuinely free variable, e.g. "h" or "n" ranging over all
+          values).
+        - Use standard sympy syntax: "**" for exponents, "Rational(a, b)"
+          for exact fractions (never decimals like "0.5" for a claim that
+          depends on exactness), explicit "*" for multiplication.
+        - List every symbol used in lhs or rhs (other than a handful of
+          reserved names sympy understands directly: pi, E, I, oo) in
+          "variables".
+
+  - name: identity_checks
+    type: AlgebraicClaimsCheckTransform
+    input: Extractor
+
+  - name: proof_critic
+    type: LlmTransform
+    input: Extractor
+    config:
+      model: "{{MODEL_CRITIC}}"
+      max_tokens: 1400
+      system: |
+        You are a proof-review critic. You receive a structured
+        proof-paper hypothesis (JSON) with a "proof_context" (the overall
+        claim) and "algebraic_claims" (specific equations transcribed
+        from the paper). You do NOT know yet whether those equations
+        checked out symbolically — that's handled elsewhere. Your job:
+        assess whether, IF every listed algebraic_claims entry turns out
+        to be symbolically consistent, that would actually be enough to
+        support "proof_context"'s overall claim, or whether there's a
+        logical gap between these local algebraic steps and the global
+        result being asserted. Also note if "algebraic_claims" is empty
+        or clearly incomplete relative to what "proof_context" asserts.
+
+        OUTPUT ONLY THIS JSON (no markdown, no code fences):
+        {"algebra_sufficient_if_verified": true, "logical_gap": "description or none", "assessment": "2-3 sentence narrative"}
+
+  - name: devils_advocate
+    type: LlmTransform
+    input: [identity_checks, proof_critic]
+    config:
+      model: "{{MODEL_CRITIC}}"
+      max_tokens: 1200
+      system: |
+        You receive two wave-1 outputs on a proof-paper hypothesis: an
+        identity_checks result (the symbolic verdict on each transcribed
+        algebraic sub-claim: consistent, violated, or not_applicable per
+        claim, plus one aggregate verdict) and a proof_critic assessment
+        (whether the algebra, if verified, would actually support the
+        overall claim). Challenge the emerging consensus:
+
+        1. Does identity_checks' aggregate verdict agree with proof_critic's
+           take? A "violated" verdict on any individual claim should
+           outweigh any LLM intuition that the overall proof still holds.
+        2. Is identity_checks' aggregate verdict "not_applicable" (no
+           claims stated, or none well-formed)? If so, say explicitly
+           that nothing was verified — the synthesizer must not treat
+           that as a pass.
+        3. What's the strongest case that even fully-verified local
+           algebra still wouldn't establish the paper's overall claim?
+
+        OUTPUT ONLY THIS JSON (no markdown, no code fences):
+        {"agreement": "description", "contradiction": "description or none", "coverage_gaps": ["which claims/steps weren't verifiable and why that matters"], "strongest_objection": "one sentence"}
+
+  - name: synthesizer
+    type: LlmTransform
+    input: [identity_checks, proof_critic, devils_advocate]
+    config:
+      model: "{{MODEL_DECISION_MAKER}}"
+      max_tokens: 50000
+      system: |
+        You are producing the final answer for someone who asked whether
+        a proof paper's own transcribed algebra holds up. You receive: an
+        identity_checks result (per-claim symbolic verdicts and one
+        aggregate verdict), a proof_critic assessment, and a devil's
+        advocate challenge.
+
+        Structure your response EXACTLY like this, in this order:
+
+        VERDICT: PLAUSIBLE | INCONSISTENT | INCONCLUSIVE
+
+        <then the conversational explanation>
+
+        The first line must be the verdict — pick exactly one of
+        PLAUSIBLE, INCONSISTENT, or INCONCLUSIVE (use INCONCLUSIVE when
+        identity_checks' aggregate verdict is not_applicable — nothing
+        concrete was verified). Put it first so it survives even if your
+        explanation gets cut short.
+
+        CRITICAL: PLAUSIBLE here means ONLY "the transcribed algebra is
+        internally consistent" — it never means "the theorem is proven."
+        This pipeline cannot and does not establish the underlying
+        mathematical result; say so explicitly in your explanation.
+
+        After the verdict line, write a conversational explanation: what
+        the hypothesis claims (proof_context), which specific algebraic
+        claims were checked and what each verdict was, what proof_critic
+        and the devil's advocate added, and your overall take. If
+        identity_checks' aggregate verdict is not_applicable, say so
+        explicitly rather than implying anything passed.
+
+budget:
+  max_usd: 1.00
+  max_wallclock_seconds: 180
