@@ -5,19 +5,19 @@
 
 ## Abstract
 
-An AI-assisted hypothesis-verification review of Finite Time Blowup for Navier–Stokes by OpenAI, testing 4 curated claims via the Moonstar physics-hypothesis pipeline (deterministic conservation-law/QM/dimension checks cross-examined by an LLM theory critic and devil's advocate). Verdicts: 3 inconclusive, 1 inconsistent.
+An AI-assisted hypothesis-verification review of Finite Time Blowup for Navier–Stokes by OpenAI, testing 3 curated claims via the Moonstar proof-algebra pipeline (hand-transcribed algebraic sub-claims verified symbolically via sympy, cross-examined by an LLM proof critic and devil's advocate). Verdicts: 3 plausible.
 
 ## Paper Summary
 
-This paper claims a construction of a smooth solution to the three-dimensional Navier–Stokes equations, with any positive viscosity, that starts from rest and has uniformly bounded kinetic energy but develops unbounded velocity in finite time—a finite-time blowup. The singularity forms at the origin via an axisymmetric, self-similar vortex whose radial width contracts faster than its axial length, causing the azimuthal and axial velocities to diverge while the core volume shrinks. The construction proceeds by building a background flow and an annular stress, then adding spatially oscillatory pulses whose nonlinear momentum fluxes cancel the singular part of the momentum residual, leaving a smooth external force. Two families of pulses with different ratios of angular-momentum to axial-momentum flux are used to represent the required stress as a positive combination, ensuring the residual extends smoothly through the singular time. The result is presented as establishing alternative (C) in the Millennium Problem statement for Navier–Stokes regularity.
+This paper constructs a smooth solution to the 3D incompressible Navier–Stokes equations with a prescribed force that blows up in finite time, starting from rest and maintaining uniformly bounded kinetic energy. The blowup is driven by an axisymmetric, self-similar vortex core whose radial width scales like τ^{1/2} and axial width like τ^{1/2-h}, with a small positive exponent h, making the core increasingly slender as the singular time approaches. Within this core, the azimuthal and axial velocities grow like τ^{-1/2-h}, while the angular Reynolds number diverges and the radial Reynolds number remains order one, ensuring a precise balance between radial diffusion and transport.
 
-The technical core involves a multi-scale iterative correction scheme. The authors introduce similarity variables and exponents to capture the self-similar blowup, and construct leading-order profiles that satisfy exact radial pressure balance and a relaxed admissible stress cone condition. These profiles are built by joining inner and outer solutions, with careful matching of five cumulative moments and smooth extension across the annulus. The residual error is then reduced stage by stage: at each step, corrections are made to harmonic amplitudes, auxiliary-averaged residuals, non-constant auxiliary means, and compatibility defects, improving the residual decay exponent by 1/10. The construction uses a sequence of oscillatory waves with carefully chosen phases, amplitudes, and wavelengths, whose averaged quadratic products cancel the required stress. The analysis relies on a wealth of technical lemmas establishing estimates, closure properties, and inverse operators for the pulse equations, ensuring that the final solution is smooth and divergence-free, and that the residual force vanishes to infinite order as the singularity time approaches.
+The construction proceeds by building an approximate solution through a matched asymptotic expansion, then correcting its residual via highly structured, spatially oscillatory pulses. The stress from these pulses is cancelled against the leading error using a covariance identity, and the correction is iterated in stages to flatten the residual to all orders in the similarity variable q. A key technical innovation is the use of a "stress cone" condition to ensure that the pulse amplitudes can be chosen with the right sign, along with a careful treatment of the exterior flow as a purely azimuthal heat field that carries no residual.
 
-The authors also verify that the constructed solution satisfies the energy estimate and uniqueness on short intervals, completing the proof of Theorem 1.1. The result is a landmark claim: that a smooth solution to the Navier–Stokes equations can develop a finite-time singularity, contrary to the widely believed regularity conjecture. The paper provides a detailed construction, supported by extensive analysis of profile equations, stress cone conditions, and iterative correction steps, along with appendices that handle the matching of inner and outer profiles, the admissible stress cone via radial modulation, and the asymptotic behavior near the axis and outer edge.
+The proof culminates by localizing the fields, showing that any global smooth competitor would coincide with the constructed solution and thus also blow up, establishing that the force is admissible for the equations and that no smooth global solution exists. The result extends to any positive viscosity by a spatial rescaling, yielding a finite-time singularity for the full 3D Navier–Stokes system with a bounded-energy initial condition and an explicitly constructed body force.
 
 ## Methodology
 
-Each hypothesis is tested through Moonstar's physics_hypothesis pipeline: an LLM Extractor converts the natural-language claim into structured JSON, which is then run through four parallel deterministic checks (conservation-law, QM calculation, reference-data lookup, and dimension consistency) alongside an LLM theory critic; a devil's advocate LLM then challenges the emerging consensus; finally a synthesizer LLM produces the conversational verdict published here. Hypotheses are hand-curated by the human author before submission to the pipeline, and all pipeline output is reviewed by the author before publication.
+Each hypothesis is tested through Moonstar's proof_hypothesis pipeline: an LLM Extractor pulls hand-transcribed algebraic sub-claims (equations transcribed from the paper by the human author) out of the natural-language hypothesis into structured JSON; each claim is verified symbolically via sympy (AlgebraicClaimsCheckTransform); an LLM proof critic assesses whether the verified algebra would actually support the hypothesis's broader claim; a devil's advocate LLM then challenges the emerging consensus; finally a synthesizer LLM produces the conversational verdict published here. PLAUSIBLE here means only that the transcribed algebra is internally consistent — it never means the underlying theorem is proven. Hypotheses, including their embedded equations, are hand-transcribed by the human author from the source paper before submission to the pipeline, and all pipeline output is reviewed by the author before publication.
 
 Models used: extraction with deepseek/deepseek-v4-flash, critique and synthesis with deepseek/deepseek-v4-pro.
 
@@ -25,88 +25,65 @@ Models used: extraction with deepseek/deepseek-v4-flash, critique and synthesis 
 
 | # | Hypothesis | Verdict | Details |
 |---|---|---|---|
-| 1 | For every positive viscosity ν, there exists a smooth, compactly-supported forcing term f such that the three-dimensional incompressible Navier–Stokes equations, starting from zero initial velocity, produce a solution whose velocity becomes unbounded (L-infinity norm diverges) in finite time while its kinetic energy (L2 norm) stays uniformly bounded for all time before the blowup. | INCONCLUSIVE | [full writeup](#hypothesis-1) |
-| 2 | This finite-time-blowup-with-bounded-energy construction establishes alternative (C) of the Fefferman Millennium Prize problem statement for the Navier–Stokes existence and smoothness problem — i.e. that there is no smooth solution on all of space and all positive time with uniformly bounded kinetic energy for this force and initial data. | INCONCLUSIVE | [full writeup](#hypothesis-2) |
-| 3 | The same compactly-supported construction also yields a corresponding finite-time blowup solution on the 3-torus T3 = R3/Z3, establishing alternative (D) of the Fefferman Millennium Prize problem statement. | INCONSISTENT | [full writeup](#hypothesis-3) |
-| 4 | The blowup mechanism relies on constructing a sequence of self-similar-like oscillatory corrections to a leading-order flow, order by order, so that the residual stress can be realized by an admissible smooth forcing term supported in a fixed compact spacetime region. | INCONCLUSIVE | [full writeup](#hypothesis-4) |
+| 1 | The paper's parameter table (page 14, preceding equation (4.1)) fixes a small exponent h and defines the tangential-velocity growth exponent A = 1/2 + h and the axial-length exponent D = 1/2 − h, both used throughout the self-similar profile construction. These two definitions must sum to exactly 1: A + D = 1. | PLAUSIBLE | [full writeup](#hypothesis-1) |
+| 2 | Equation (5.1) writes the pressure coefficient profile as p_n = q^(-2A+λn) * Π_n, using the radial-mode exponent λ_n = 2*n*h from the parameter table together with A = 1/2 + h from the same table. Substituting these two definitions, the combined exponent -2*A + λ_n must simplify to exactly -1 + 2*h*(n-1). | PLAUSIBLE | [full writeup](#hypothesis-2) |
+| 3 | Section 10.4's viscosity-rescaling argument (equations (10.22)-(10.23)) extends the viscosity-one construction to every positive viscosity ν by setting v(y,t) = ν^(-1/2) * v_ν(sqrt(ν)*y, t). The paper states this gives the L2-norm scaling relation ||v(t)||_2^2 = ν^(-5/2) * ||v_ν(t)||_2^2. This combined exponent -5/2 must equal the sum of the amplitude-squaring exponent (-1, from squaring the ν^(-1/2) prefactor) and the exponent contributed by the volume element under the substitution y = sqrt(ν)*x in three spatial dimensions (-3/2): -1 + (-3/2) = -5/2. | PLAUSIBLE | [full writeup](#hypothesis-3) |
 
 ## Evidence
 
 ### Hypothesis 1
 
-**Claim:** For every positive viscosity ν, there exists a smooth, compactly-supported forcing term f such that the three-dimensional incompressible Navier–Stokes equations, starting from zero initial velocity, produce a solution whose velocity becomes unbounded (L-infinity norm diverges) in finite time while its kinetic energy (L2 norm) stays uniformly bounded for all time before the blowup.
+**Claim:** The paper's parameter table (page 14, preceding equation (4.1)) fixes a small exponent h and defines the tangential-velocity growth exponent A = 1/2 + h and the axial-length exponent D = 1/2 − h, both used throughout the self-similar profile construction. These two definitions must sum to exactly 1: A + D = 1.
 
-**Verdict:** INCONCLUSIVE
+**Verdict:** PLAUSIBLE
 
-The hypothesis you’ve provided is empty—it specifies no initial or final states, no system, no particles, and no physical claim. Because of that, every deterministic check (conservation‑law, QM calculation, reference‑data lookup, and dimension‑consistency) returned **not_applicable**; they couldn’t even find anything to test. The theory critic also flagged the hypothesis as ill‑posed and not a substantive physical claim. The devil’s advocate emphasized that an empty hypothesis is meaningless, and that all the not_applicable results are simply missing evidence, not a green light.
+The only algebraic claim that was transcribed and checked — that the sum of the two exponents A and D equals 1 — is internally consistent. The identity_checks system verifies symbolic simplification: (1/2 + h) + (1/2 – h) reduces exactly to 1, with a consistent verdict. The proof_critic confirms that this verified identity directly supports the proof_context’s assertion that A + D = 1, with no logical gap in that step.
 
-Since there’s nothing concrete to evaluate, and the only available analysis came from LLM reasoning (the critic and the devil’s advocate), the appropriate verdict is **INCONCLUSIVE**. To move forward, you’d need to provide a specific physical scenario with defined states, particles, and a testable prediction.
+However, the devil’s advocate raises a crucial point: the overall paper’s theorem very likely requires much more than this one trivial simplification. The pipeline only tested the algebraic step that was explicitly transcribed; any unstated assumptions, additional algebraic manipulations, or dependencies on definitions that were not enumerated remain completely unchecked. The verified step is a small, elementary identity — it does not, on its own, prove the full result. So while the transcribed algebra that we *could* check is indeed consistent, the theorem itself is not established by this pipeline, and the full proof may still contain gaps.
+
+In summary: the single checked algebraic identity is valid, so the verdict on the transcribed algebra is PLAUSIBLE — but that says nothing about whether the larger theorem is actually proved. That would require a complete, step‑by‑step verification of all necessary components, which is beyond what this run examined.
 
 **Deterministic checks:**
 
-- `conservation_check`: not_applicable
-- `dimension_check`: not_applicable
-- `qm_calculation`: not_applicable
-- `reference_lookup`: not_applicable
+- `identity_checks`: consistent
 
-[Raw run data](runs/local-fb8f7e49ed34.json)
+[Raw run data](runs/local-83ac6eb95cc1.json)
 
 ### Hypothesis 2
 
-**Claim:** This finite-time-blowup-with-bounded-energy construction establishes alternative (C) of the Fefferman Millennium Prize problem statement for the Navier–Stokes existence and smoothness problem — i.e. that there is no smooth solution on all of space and all positive time with uniformly bounded kinetic energy for this force and initial data.
+**Claim:** Equation (5.1) writes the pressure coefficient profile as p_n = q^(-2A+λn) * Π_n, using the radial-mode exponent λ_n = 2*n*h from the parameter table together with A = 1/2 + h from the same table. Substituting these two definitions, the combined exponent -2*A + λ_n must simplify to exactly -1 + 2*h*(n-1).
 
-**Verdict:** INCONCLUSIVE
+**Verdict:** PLAUSIBLE
 
-The hypothesis attempts to repackage a pure mathematical conjecture (Navier–Stokes regularity) into a quantum‑physics claim, but it fails to specify any physical system, initial or final states, quantum numbers, or dimensions. Consequently, every deterministic check — conservation laws, QM calculation, dimension consistency, and reference lookup — returned “not_applicable” because there was no structured physical data to test. The theory critic and devil’s advocate both confirm that the statement is not a well‑posed physics hypothesis; it is a mathematical remark forced into a physical schema, making it unverifiable by any physical procedure. Since the deterministic checks could not be applied and the remaining assessment relies solely on LLM reasoning, the verdict is INCONCLUSIVE — the hypothesis does not provide a basis for a meaningful physical evaluation, and no positive or negative physical conclusion can be drawn.
+The claim under scrutiny is a single algebraic substitution: plugging \(A = \frac{1}{2} + h\) and \(\lambda_n = 2nh\) into the expression \(-2A + \lambda_n\), then simplifying to obtain \(-1 + 2h(n-1)\). The identity check verified this directly — the left-hand side \(-2(\frac{1}{2} + h) + 2nh\) simplifies exactly to \(-1 + 2h(n-1)\), with zero symbolic difference between the claimed and derived forms. The aggregate verdict from identity_checks is "consistent."
+
+The proof critic concurs, noting that this single algebraic step is precisely the transformation described in the proof context, and that no further logical steps are missing within the scope of what was checked. The devil's advocate raises a fair caveat: the verification covers only this one isolated substitution, and "consistent" here does not mean the entire proof has been vetted end-to-end. That caveat is correct — this pipeline can only confirm that the transcribed algebra is internally consistent; it does not and cannot establish the broader theorem or the correctness of any surrounding argument, assumptions, or derivation from elsewhere in the paper.
+
+So the right way to read "PLAUSIBLE" here is narrow: the algebra as transcribed checks out. Whether the choice of \(A\) and \(\lambda_n\), the surrounding derivation, or the ultimate mathematical result is correct is beyond what this verification can demonstrate.
 
 **Deterministic checks:**
 
-- `conservation_check`: not_applicable
-- `dimension_check`: not_applicable
-- `qm_calculation`: not_applicable
-- `reference_lookup`: not_applicable
+- `identity_checks`: consistent
 
-[Raw run data](runs/local-bad98c8f8002.json)
+[Raw run data](runs/local-a73a4c5a6bba.json)
 
 ### Hypothesis 3
 
-**Claim:** The same compactly-supported construction also yields a corresponding finite-time blowup solution on the 3-torus T3 = R3/Z3, establishing alternative (D) of the Fefferman Millennium Prize problem statement.
+**Claim:** Section 10.4's viscosity-rescaling argument (equations (10.22)-(10.23)) extends the viscosity-one construction to every positive viscosity ν by setting v(y,t) = ν^(-1/2) * v_ν(sqrt(ν)*y, t). The paper states this gives the L2-norm scaling relation ||v(t)||_2^2 = ν^(-5/2) * ||v_ν(t)||_2^2. This combined exponent -5/2 must equal the sum of the amplitude-squaring exponent (-1, from squaring the ν^(-1/2) prefactor) and the exponent contributed by the volume element under the substitution y = sqrt(ν)*x in three spatial dimensions (-3/2): -1 + (-3/2) = -5/2.
 
-**Verdict:** INCONSISTENT
+**Verdict:** PLAUSIBLE
 
-The hypothesis attempts to claim a finite-time blowup solution to the Navier-Stokes equations on a manifold it calls “R3/Z3” and somehow connect this classical fluid-dynamics statement to a quantum-physics context. The deterministic checks — conservation-law check, QM calculation, reference-data lookup, and dimension-consistency check — all returned “not_applicable” because no concrete inputs (initial/final states, system type, signed references, or dimension claims) were provided. A “not_applicable” means the checks could not run, not that anything passed.
+The identity_checks tool found that, of the two algebraic claims extracted from the paper, one couldn't be parsed at all (the scaling relation for the squared L2‑norm under viscosity rescaling), while the other – an exponent sum identity – was symbolically consistent. The aggregate verdict is therefore “consistent”, meaning the single transcription that could be checked holds up algebraically.  
 
-The theory critic flagged that “R3/Z3” is not a well-defined 3‑torus (presumably R³/ℤ³ was intended) and that asserting a finite-time blowup for the incompressible Navier-Stokes equations on T³ without specifying initial data, viscosity, forcing, or solution class makes the claim not well-posed. Moreover, global regularity versus finite-time blowup on T³ is an open Millennium Prize problem, so a bare assertion doesn’t hold. The critic also noted the hypothesis contains no quantum states, particles, or operators, so it doesn’t genuinely engage quantum theory.
+That is an extremely narrow result. The checked identity simply confirms that −5/2 = −1 + (−3/2); it doesn't touch the heart of the argument, which claims that a self‑similar substitution extends a ν=1 construction to all positive viscosities. The proof_critic explicitly flags that verifying this minor relation is insufficient to demonstrate preservation of the Navier–Stokes equations, handling of boundary or initial conditions, or existence for every viscosity. The devil’s advocate further notes that the central scaling step (the claim that failed to parse) was never verified at all.  
 
-The devil’s advocate agreed with the “not_applicable” outcomes, pointed out that no deterministic verdict could conflict with the critic’s assessment, and added that the hypothesis is not physically meaningful because the blowup claim is made on an ill-defined manifold without the required details to be falsifiable or connected to quantum theory.
-
-Overall this isn’t a quantum-physics hypothesis that made a testable prediction and failed; it’s a classical-fluid assertion that was never stated in a well-posed way and never linked to quantum mechanics. That’s why the verdict is INCONSISTENT — the hypothesis lacks the structure and content needed to be evaluated as a sensible quantum-physics claim.
+So “PLAUSIBLE” here means only that the one piece of algebra the pipeline could check is internally consistent; it does *not* mean the underlying theorem is proved or even that the paper’s core algebraic steps are sound. The overall claim of a global well‑posedness result remains unsupported by the evidence this pipeline can provide.
 
 **Deterministic checks:**
 
-- `conservation_check`: not_applicable
-- `dimension_check`: not_applicable
-- `qm_calculation`: not_applicable
-- `reference_lookup`: not_applicable
+- `identity_checks`: consistent
 
-[Raw run data](runs/local-3e2d57eb172d.json)
-
-### Hypothesis 4
-
-**Claim:** The blowup mechanism relies on constructing a sequence of self-similar-like oscillatory corrections to a leading-order flow, order by order, so that the residual stress can be realized by an admissible smooth forcing term supported in a fixed compact spacetime region.
-
-**Verdict:** INCONCLUSIVE
-
-The hypothesis describes a classical stress tensor blowup scenario with self-similar oscillatory corrections and a smooth forcing term, but no initial and final states, dimension claims, system type, or reference data were provided. Consequently, every deterministic check—conservation-law, dimension-consistency, QM calculation, and reference lookup—returned “not_applicable” because they had nothing to work with. The theory critic and devil’s advocate both observed that the claim is framed entirely in the language of classical continuum mechanics and nonlinear PDEs; it makes no contact with quantum state spaces, observables, or dynamics, and thus cannot be evaluated as a quantum-physics hypothesis. In the absence of any applicable deterministic check, only the LLM-based assessments remain, and they point to a fundamental disconnect from quantum theory. This leaves the verdict inconclusive from a quantum perspective—the hypothesis may be mathematically interesting, but as a quantum-physics claim it lacks the ingredients needed to be tested.
-
-**Deterministic checks:**
-
-- `conservation_check`: not_applicable
-- `dimension_check`: not_applicable
-- `qm_calculation`: not_applicable
-- `reference_lookup`: not_applicable
-
-[Raw run data](runs/local-cdd8cdeded7d.json)
+[Raw run data](runs/local-5df49f6e15ba.json)
 
 ## References
 
