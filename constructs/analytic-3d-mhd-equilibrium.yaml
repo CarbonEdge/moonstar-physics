@@ -1,0 +1,37 @@
+slug: analytic-3d-mhd-equilibrium
+title: Nonaxisymmetric MHD equilibrium with nested toroidal flux surfaces
+statement: >
+  Find an explicit, non-axisymmetric magnetic field B in a toroidal subset
+  of R^3 with nested toroidal flux surfaces psi (psi >= 0, psi = 0 on the
+  magnetic axis, a closed curve), divergence-free, in MHD force balance
+  (curl B) x B = grad p with p = p(psi), and nonzero rotational transform.
+  Non-integer iota is better but not required. Give B, psi, p as closed-form
+  expressions in Cartesian (x, y, z).
+unknowns:
+  - {name: B,   kind: vector_field, vars: [x, y, z]}
+  - {name: psi, kind: scalar_field, vars: [x, y, z]}
+  - {name: p,   kind: scalar_field, of: psi}
+criteria:
+  hard:
+    - {id: div_free,        check: divergence_zero, expr: "div(B)"}
+    - {id: flux_surface,    check: identity_zero,   expr: "dot(B, grad(psi))"}
+    - {id: force_balance,   check: identity_zero,   expr: "cross(curl(B), B) - grad(p)"}
+    - {id: psi_nonneg,      check: numeric_sample,  kind: nonnegative, target: psi}
+    - {id: psi_nonconstant, check: numeric_sample,  kind: nonconstant, target: psi}
+    - {id: p_nonconstant,   check: numeric_sample,  kind: nonconstant, target: p}
+    - {id: nonaxisym,       check: numeric_sample,  kind: axisymmetry_breaking, target: B}
+    - {id: iota_nonzero,    check: sandbox_experiment, note: "field-line trace; Phase 2 template"}
+  soft:
+    - {id: iota_noninteger, check: sandbox_experiment, note: "Phase 2 template"}
+    - {id: novel,           check: manual, note: "human literature check"}
+mechanism_hints:
+  - axis torsion
+  - rotating elongation of psi-surfaces with the toroidal angle
+  - axial current density
+degrees_of_freedom:
+  - {name: epsilon, range: [0.05, 0.9]}
+sample_box:
+  x: [-1.5, 1.5]
+  y: [-1.5, 1.5]
+  z: [-0.5, 0.5]
+budget: {max_usd: 15.00, max_wallclock_seconds: 3600, max_rounds: 5}
