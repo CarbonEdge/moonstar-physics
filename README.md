@@ -118,7 +118,7 @@ Checks a candidate closed-form object (B, psi, p as strings) against a
 `constructs/<slug>.yaml` spec's acceptance criteria --- no LLM, no gateway:
 
 ```bash
-python scripts/check_construct_candidate.py constructs/analytic-3d-mhd-equilibrium.yaml \r
+python scripts/check_construct_candidate.py constructs/analytic-3d-mhd-equilibrium.yaml \
     tests/fixtures/iota2_candidate.json
 ```
 
