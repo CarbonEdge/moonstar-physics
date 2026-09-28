@@ -112,6 +112,23 @@ export MOONSTAR_AUTH_TOKEN=<token>  # from `python -m moonstar_gateway.cli seed-
 python scripts/test_hypothesis.py "could a muon decay into an electron and a photon?"
 ```
 
+## Construct checker (Phase 1 of the construct pipeline)
+
+Checks a candidate closed-form object (B, psi, p as strings) against a
+`constructs/<slug>.yaml` spec's acceptance criteria --- no LLM, no gateway:
+
+```bash
+python scripts/check_construct_candidate.py constructs/analytic-3d-mhd-equilibrium.yaml \r
+    tests/fixtures/iota2_candidate.json
+```
+
+Prints `VERDICT: CONSTRUCTED | PARTIAL | NOT_FOUND` and a met / unmet /
+unverified checklist. Numeric evidence only (random in-domain points,
+tolerance 1e-8) --- not proof, not a novelty claim. Criteria needing the
+Phase 2 sandbox templates (e.g. `iota_nonzero`) report `unverified`.
+See `docs/superpowers/specs/2026-09-28-moonstar-physics-construct-pipeline-design.md`
+in the workspace root.
+
 ## Paper Reviews
 
 Publishes AI-tested reviews of physics papers to a GitHub Pages site under
