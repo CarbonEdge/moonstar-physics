@@ -20,6 +20,8 @@ IdentityCheckTransform        = "moonstar_physics.maths.identity_transform:Ident
 ConjectureCheckTransform      = "moonstar_physics.maths.conjecture_transform:ConjectureCheckTransform"
 AlgebraicClaimsCheckTransform = "moonstar_physics.algebra_claims_transform:AlgebraicClaimsCheckTransform"
 NumericalExperimentTransform  = "moonstar_physics.numerical_experiment_transform:NumericalExperimentTransform"
+VectorCalculusCheckTransform  = "moonstar_physics.vector_calculus_check_transform:VectorCalculusCheckTransform"
+ConstructCriteriaTransform    = "moonstar_physics.construct_criteria_transform:ConstructCriteriaTransform"
 
 [build-system]
 requires = ["hatchling"]

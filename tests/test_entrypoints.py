@@ -23,6 +23,8 @@ _TRANSFORM_NAMES = (
     "ConjectureCheckTransform",
     "AlgebraicClaimsCheckTransform",
     "NumericalExperimentTransform",
+    "VectorCalculusCheckTransform",
+    "ConstructCriteriaTransform",
 )
 
 

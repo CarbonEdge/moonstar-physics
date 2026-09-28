@@ -631,3 +631,13 @@ async def test_gateway_session_failure_is_caught_and_partial_artifacts_preserved
     assert "reduction_b" not in by_name
     assert "synthesizer" not in by_name
     assert [r["node"] for r in seen] == ["Extractor", "proof_critic", "reduction_a"]
+
+
+def test_construct_local_transform_registry_is_awaitable():
+    import inspect
+    from moonstar_physics.local_pipeline import _CONSTRUCT_LOCAL_TRANSFORMS
+
+    assert set(_CONSTRUCT_LOCAL_TRANSFORMS) == {
+        "VectorCalculusCheckTransform", "ConstructCriteriaTransform",
+    }
+    assert all(inspect.iscoroutinefunction(fn) for fn in _CONSTRUCT_LOCAL_TRANSFORMS.values())

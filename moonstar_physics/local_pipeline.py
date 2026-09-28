@@ -45,10 +45,12 @@ from ._compat import NonRetryableTransformError, SessionContext
 from ._pipeline_spec import PipelineSpec, TransformSpec
 from .algebra_claims_transform import AlgebraicClaimsCheckTransform
 from .conservation_transform import ConservationLawCheckTransform
+from .construct_criteria_transform import ConstructCriteriaTransform
 from .dimension_transform import DimensionConsistencyTransform
 from .numerical_experiment_transform import NumericalExperimentTransform
 from .qm_calc_transform import QMCalculationTransform
 from .reference_lookup_transform import ReferenceDataLookupTransform
+from .vector_calculus_check_transform import VectorCalculusCheckTransform
 
 _POLL_INTERVAL_SECONDS = 2
 _MAX_POLLS = 90
@@ -70,6 +72,15 @@ _LOCAL_TRANSFORMS: dict[str, Callable[[dict[str, Any], dict[str, Any], SessionCo
 # shared wave-1 deterministic step (both pipelines use it identically).
 _PROOF_LOCAL_TRANSFORMS: dict[str, Callable[[dict[str, Any], dict[str, Any], SessionContext], Awaitable[dict[str, Any]]]] = {
     "AlgebraicClaimsCheckTransform": AlgebraicClaimsCheckTransform,
+}
+
+
+# Transform types run locally for the construct pipeline (Phase 1 checker
+# stages). Consumed by Phase 2's run_construct orchestrator; not yet
+# wired into any run_* function.
+_CONSTRUCT_LOCAL_TRANSFORMS: dict[str, Callable[[dict[str, Any], dict[str, Any], SessionContext], Awaitable[dict[str, Any]]]] = {
+    "VectorCalculusCheckTransform": VectorCalculusCheckTransform,
+    "ConstructCriteriaTransform": ConstructCriteriaTransform,
 }
 
 
