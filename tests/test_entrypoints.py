@@ -25,6 +25,7 @@ _TRANSFORM_NAMES = (
     "NumericalExperimentTransform",
     "VectorCalculusCheckTransform",
     "ConstructCriteriaTransform",
+    "IotaTraceTransform",
 )
 
 

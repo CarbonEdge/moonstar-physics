@@ -47,6 +47,7 @@ from .algebra_claims_transform import AlgebraicClaimsCheckTransform
 from .conservation_transform import ConservationLawCheckTransform
 from .construct_criteria_transform import ConstructCriteriaTransform
 from .dimension_transform import DimensionConsistencyTransform
+from .iota_trace_transform import IotaTraceTransform
 from .numerical_experiment_transform import NumericalExperimentTransform
 from .qm_calc_transform import QMCalculationTransform
 from .reference_lookup_transform import ReferenceDataLookupTransform
@@ -76,11 +77,11 @@ _PROOF_LOCAL_TRANSFORMS: dict[str, Callable[[dict[str, Any], dict[str, Any], Ses
 
 
 # Transform types run locally for the construct pipeline (Phase 1 checker
-# stages). Consumed by Phase 2's run_construct orchestrator; not yet
-# wired into any run_* function.
+# stages + Phase 2 iota sandbox stage; consumed by construct_pipeline.run_construct.
 _CONSTRUCT_LOCAL_TRANSFORMS: dict[str, Callable[[dict[str, Any], dict[str, Any], SessionContext], Awaitable[dict[str, Any]]]] = {
     "VectorCalculusCheckTransform": VectorCalculusCheckTransform,
     "ConstructCriteriaTransform": ConstructCriteriaTransform,
+    "IotaTraceTransform": IotaTraceTransform,
 }
 
 

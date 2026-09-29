@@ -19,6 +19,7 @@ SUPPORTED_CHECKS = frozenset(
     {"divergence_zero", "identity_zero", "numeric_sample", "sandbox_experiment", "manual"}
 )
 NUMERIC_KINDS = frozenset({"nonnegative", "nonconstant", "axisymmetry_breaking"})
+SANDBOX_KINDS = frozenset({"iota_nonzero", "iota_noninteger"})
 GATE_CHECKS = frozenset({"divergence_zero", "identity_zero"})
 _AXES = ("x", "y", "z")
 _ALLOWED_TOP_LEVEL = frozenset(
@@ -91,6 +92,10 @@ def _parse_criterion(raw: Any, hard: bool) -> Criterion:
             raise ConstructSpecError(f"criterion {cid!r}: unknown numeric_sample kind {kind!r}")
         if not (isinstance(target, str) and target):
             raise ConstructSpecError(f"criterion {cid!r}: numeric_sample requires a target")
+    if check == "sandbox_experiment" and kind not in SANDBOX_KINDS:
+        raise ConstructSpecError(
+            f"criterion {cid!r}: unknown sandbox_experiment kind {kind!r}"
+        )
     return Criterion(
         id=cid, check=check, hard=hard, expr=expr, kind=kind, target=target,
         note=str(raw.get("note", "")),

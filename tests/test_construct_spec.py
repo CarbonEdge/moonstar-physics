@@ -126,3 +126,21 @@ def test_parse_does_not_mutate_input():
     snapshot = copy.deepcopy(data)
     parse_construct_spec(data)
     assert data == snapshot
+
+
+def test_sandbox_experiment_requires_known_kind():
+    data = _valid()
+    data["criteria"]["hard"].append({"id": "trace", "check": "sandbox_experiment"})
+    with pytest.raises(ConstructSpecError, match="sandbox_experiment kind"):
+        parse_construct_spec(data)
+    data["criteria"]["hard"][-1]["kind"] = "warp_drive"
+    with pytest.raises(ConstructSpecError, match="sandbox_experiment kind"):
+        parse_construct_spec(data)
+    data["criteria"]["hard"][-1]["kind"] = "iota_nonzero"
+    assert parse_construct_spec(data).hard_criteria()[-1].kind == "iota_nonzero"
+
+
+def test_real_spec_sandbox_criteria_have_kinds():
+    spec = load_construct_spec(Path(__file__).parent.parent / "constructs" / "analytic-3d-mhd-equilibrium.yaml")
+    kinds = {c.id: c.kind for c in spec.criteria if c.check == "sandbox_experiment"}
+    assert kinds == {"iota_nonzero": "iota_nonzero", "iota_noninteger": "iota_noninteger"}

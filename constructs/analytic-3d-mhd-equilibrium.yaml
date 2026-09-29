@@ -20,9 +20,9 @@ criteria:
     - {id: psi_nonconstant, check: numeric_sample,  kind: nonconstant, target: psi}
     - {id: p_nonconstant,   check: numeric_sample,  kind: nonconstant, target: p}
     - {id: nonaxisym,       check: numeric_sample,  kind: axisymmetry_breaking, target: B}
-    - {id: iota_nonzero,    check: sandbox_experiment, note: "field-line trace; Phase 2 template"}
+    - {id: iota_nonzero,    check: sandbox_experiment, kind: iota_nonzero, note: "field-line trace, |iota| > 1e-3"}
   soft:
-    - {id: iota_noninteger, check: sandbox_experiment, note: "Phase 2 template"}
+    - {id: iota_noninteger, check: sandbox_experiment, kind: iota_noninteger, note: "field-line trace, iota not within 1e-3 of an integer"}
     - {id: novel,           check: manual, note: "human literature check"}
 mechanism_hints:
   - axis torsion

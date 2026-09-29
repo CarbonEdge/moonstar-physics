@@ -638,6 +638,6 @@ def test_construct_local_transform_registry_is_awaitable():
     from moonstar_physics.local_pipeline import _CONSTRUCT_LOCAL_TRANSFORMS
 
     assert set(_CONSTRUCT_LOCAL_TRANSFORMS) == {
-        "VectorCalculusCheckTransform", "ConstructCriteriaTransform",
+        "VectorCalculusCheckTransform", "ConstructCriteriaTransform", "IotaTraceTransform",
     }
     assert all(inspect.iscoroutinefunction(fn) for fn in _CONSTRUCT_LOCAL_TRANSFORMS.values())
