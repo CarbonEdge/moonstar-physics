@@ -159,3 +159,28 @@ def test_enforce_verdict_line(text, expected):
 def test_llm_polling_ceiling_exceeds_the_shared_default():
     # Live run 2026-09-29: a v4-pro Generator took longer than the shared 180 s ceiling.
     assert construct_pipeline._LLM_MAX_POLLS > local_pipeline._MAX_POLLS
+
+
+async def test_failed_llm_step_is_retried_once_then_succeeds():
+    counts: dict[str, int] = {}
+    sessions: dict[str, tuple[str, bool]] = {}
+
+    def handler(request: httpx.Request) -> httpx.Response:
+        if request.url.path == "/pipelines/run":
+            node = yaml.safe_load(json.loads(request.content)["yaml_spec"])["transforms"][0]["name"]
+            counts[node] = counts.get(node, 0) + 1
+            sid = f"sess-{node}-{counts[node]}"
+            sessions[sid] = (node, node == "Planner" and counts[node] == 1)   # first Planner call fails
+            return httpx.Response(200, json={"session_id": sid})
+        node, fail = sessions[request.url.path.rsplit("/", 1)[-1]]
+        if fail:
+            return httpx.Response(200, json={"status": "failed", "artifacts": []})
+        return httpx.Response(200, json={
+            "status": "completed",
+            "artifacts": [{"transform_name": node, "data": {"response": _FULL[node]}}],
+        })
+
+    result = await run_construct(_SPEC, "http://gateway.test", "tok", _PIPELINE, _MODELS,
+                                 transport=httpx.MockTransport(handler))
+    assert result["status"] == "completed" and result["verdict"] == "CONSTRUCTED"
+    assert counts["Planner"] == 2

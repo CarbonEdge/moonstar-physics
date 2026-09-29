@@ -78,6 +78,9 @@ transforms:
           psi = 0 on a closed magnetic axis curve inside the sample box.
           psi and p must be non-constant. Check these yourself
           symbolically before answering.
+        - Your output budget is limited and reasoning counts against it. Keep
+          internal deliberation short and commit to a concrete candidate; an
+          answer with a known-imperfect candidate beats no answer.
         - Never claim the object is novel or proven. If you cannot meet a
           criterion, still output your best candidate and say which
           criterion you expect to fail in derivation_notes.
