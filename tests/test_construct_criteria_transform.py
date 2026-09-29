@@ -105,3 +105,54 @@ async def test_custom_source(ctx):
 async def test_malformed_input_raises(ctx, bad):
     with pytest.raises(NonRetryableTransformError):
         await _run(bad, ctx)
+
+
+_MHD_SPEC = str(Path(__file__).parent.parent / "constructs" / "analytic-3d-mhd-equilibrium.yaml")
+
+
+def _all_pass_checks() -> dict:
+    ids = ["div_free", "flux_surface", "force_balance", "psi_nonneg",
+           "psi_nonconstant", "p_nonconstant", "nonaxisym"]
+    return {"results": [{"id": i, "check": "x", "status": "pass"} for i in ids]}
+
+
+async def test_sources_merge_checker_and_iota_rows_into_constructed():
+    iota = {"results": [
+        {"id": "iota_nonzero", "check": "sandbox_experiment", "status": "pass", "iota": -2.0},
+        {"id": "iota_noninteger", "check": "sandbox_experiment", "status": "fail", "iota": -2.0},
+    ]}
+    out = await ConstructCriteriaTransform(
+        {"checks": _all_pass_checks(), "iota": iota},
+        {"spec_path": _MHD_SPEC, "sources": ["checks", "iota"]}, SessionContext(),
+    )
+    assert out["verdict"] == "CONSTRUCTED"
+    soft = {r["id"]: r["status"] for r in out["checklist"] if not r["hard"]}
+    assert soft["iota_noninteger"] == "unmet"          # integer iota is visible, not hidden
+    assert soft["novel"] == "unverified"
+
+
+async def test_iota_error_keeps_verdict_partial():
+    iota = {"results": [
+        {"id": "iota_nonzero", "check": "sandbox_experiment", "status": "error", "detail": "no zero minimum"},
+    ]}
+    out = await ConstructCriteriaTransform(
+        {"checks": _all_pass_checks(), "iota": iota},
+        {"spec_path": _MHD_SPEC, "sources": ["checks", "iota"]}, SessionContext(),
+    )
+    assert out["verdict"] == "PARTIAL"
+    assert out["unverified_hard"] == ["iota_nonzero"]
+
+
+async def test_missing_listed_source_is_an_error():
+    with pytest.raises(NonRetryableTransformError):
+        await ConstructCriteriaTransform(
+            {"checks": _all_pass_checks()},
+            {"spec_path": _MHD_SPEC, "sources": ["checks", "iota"]}, SessionContext(),
+        )
+
+
+async def test_single_source_config_still_works():
+    out = await ConstructCriteriaTransform(
+        {"checks": _all_pass_checks()}, {"spec_path": _MHD_SPEC, "source": "checks"}, SessionContext(),
+    )
+    assert out["verdict"] == "PARTIAL"                 # iota_nonzero unverified, as in Phase 1

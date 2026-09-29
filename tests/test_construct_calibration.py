@@ -83,3 +83,25 @@ def test_cli_usage_error_on_missing_args():
     proc = subprocess.run([sys.executable, str(_SCRIPT)], capture_output=True, text=True, timeout=60)
     assert proc.returncode == 2
     assert "usage" in (proc.stderr + proc.stdout).lower()
+
+
+async def test_iota2_end_to_end_is_constructed_with_sandbox_stage(monkeypatch):
+    """Phase 2 promotes Landreman's iota=2 field from PARTIAL (Phase 1) to CONSTRUCTED."""
+    from moonstar_physics import iota_trace_transform as iota_mod
+    from moonstar_physics._compat import SessionContext
+    from moonstar_physics.construct_criteria_transform import ConstructCriteriaTransform
+    from moonstar_physics.iota_trace_transform import IotaTraceTransform
+    from moonstar_physics.vector_calculus_check_transform import VectorCalculusCheckTransform
+    from .iota_helpers import fake_sandbox
+
+    monkeypatch.setattr(iota_mod, "_run_sandbox", fake_sandbox)
+    _IOTA2 = json.loads(_IOTA2_PATH.read_text(encoding="utf-8"))
+    inp = {"Generator_A": {"response": json.dumps(_IOTA2)}}
+    checks = await VectorCalculusCheckTransform(inp, {"spec_path": _SPEC, "source": "Generator_A"}, SessionContext())
+    iota = await IotaTraceTransform(inp, {"spec_path": _SPEC, "source": "Generator_A"}, SessionContext())
+    out = await ConstructCriteriaTransform(
+        {"checks": checks, "iota": iota},
+        {"spec_path": _SPEC, "sources": ["checks", "iota"]}, SessionContext(),
+    )
+    assert out["verdict"] == "CONSTRUCTED"
+    assert {r["id"]: r["status"] for r in out["checklist"]}["iota_noninteger"] == "unmet"

@@ -10,6 +10,8 @@ Verdict:
 
 CONSTRUCTED means "satisfies the stated criteria as checked here" — never
 "novel", never "proven".
+
+Config: sources (list of input keys holding {"results": [...]}); "source" is the single-key form.
 """
 from __future__ import annotations
 
@@ -25,14 +27,16 @@ async def ConstructCriteriaTransform(
     input: dict[str, Any], config: dict[str, Any], ctx: SessionContext
 ) -> dict[str, Any]:
     spec = load_construct_spec(config["spec_path"])
-    source = config.get("source", "checks")
-    block = input.get(source)
-    if not isinstance(block, dict) or not isinstance(block.get("results"), list):
-        raise NonRetryableTransformError(
-            f"Expected {source!r} dependency with a 'results' list — is this "
-            "transform's `input:` wired to the checker step?"
-        )
-    by_id = {r["id"]: r for r in block["results"] if isinstance(r, dict) and "id" in r}
+    sources = list(config.get("sources") or [config.get("source", "checks")])
+    by_id: dict[str, Any] = {}
+    for source in sources:
+        block = input.get(source)
+        if not isinstance(block, dict) or not isinstance(block.get("results"), list):
+            raise NonRetryableTransformError(
+                f"Expected {source!r} dependency with a 'results' list — is this "
+                "transform's `input:` wired to the checker step?"
+            )
+        by_id.update({r["id"]: r for r in block["results"] if isinstance(r, dict) and "id" in r})
 
     checklist = []
     for c in spec.criteria:
