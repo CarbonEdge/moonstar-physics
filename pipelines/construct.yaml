@@ -1,0 +1,177 @@
+pipeline:
+  name: construct
+  version: "1.0"
+  description: >
+    Single-round construct pipeline (Phase 2). A Planner assigns each of two
+    independent Generators a different mechanism/ansatz; each candidate is
+    checked deterministically (VectorCalculusCheckTransform), traced in the
+    Docker sandbox for rotational transform (IotaTraceTransform), and merged
+    into a met/unmet/unverified checklist by ConstructCriteriaTransform. The
+    LLM critic/devil's advocate/synthesizer only run for a candidate that
+    passed the symbolic gate. The verdict is computed by code; the
+    synthesizer cannot change it. Local nodes get `spec_path` injected by
+    construct_pipeline.run_construct. No control flow lives here.
+
+transforms:
+  - name: Planner
+    type: LlmTransform
+    config:
+      model: "{{MODEL_PLANNER}}"
+      max_tokens: 2000
+      system: |
+        You plan a construction task. You receive a task spec (statement,
+        unknowns, hard/soft acceptance criteria, mechanism hints, free
+        parameters). Two independent generators will each propose an explicit
+        closed-form object; your job is to give them DIFFERENT starting points
+        so their attempts are not correlated. Output ONLY the JSON object
+        below, no markdown fences, no commentary.
+
+        Schema:
+        {
+          "generator_a": {"mechanism": "<one mechanism hint or your own>", "ansatz": "<1-3 sentences: concrete functional form to try>"},
+          "generator_b": {"mechanism": "<a different mechanism>", "ansatz": "<1-3 sentences>"},
+          "target": "<which hard criterion is likely hardest and why, one sentence>"
+        }
+
+        Rules:
+        - The two mechanisms must differ.
+        - Mechanism hints in the spec are seeds, not requirements; you may
+          propose another if you can justify it in the ansatz.
+        - Do not write the final field yourself. Do not claim any candidate
+          is novel or correct.
+
+  - name: Generator_A
+    type: LlmTransform
+    input: Planner
+    config: &generator_config
+      model: "{{MODEL_GENERATOR}}"
+      max_tokens: 8000
+      system: |
+        You construct an explicit closed-form mathematical object that meets
+        a formal spec. You receive {"task": <spec>, "assignment": {"mechanism":
+        ..., "ansatz": ...}}. Work out the construction, then output ONLY the JSON object below — no markdown fences, no prose outside the JSON.
+
+        Schema:
+        {
+          "defs": {"<name>": "<expression>", ...},
+          "objects": {"B": ["<expr>", "<expr>", "<expr>"], "psi": "<expr>", "p": "<expr>"},
+          "params": {"<free parameter name>": <number>},
+          "derivation_notes": "<short: why this should satisfy the criteria>"
+        }
+
+        Rules:
+        - Cartesian coordinates ONLY: the free variables are x, y, z. If you
+          think in cylindrical/toroidal coordinates, convert to x, y, z
+          yourself before writing any expression.
+        - Every expression is a plain math string parseable by sympy
+          (operators + - * / **, sqrt, sin, cos, exp, log, tan, atan2, Abs).
+          No Python code, no function definitions, no lambdas, no imports.
+        - "defs" are optional named sub-expressions, evaluated in order; a
+          def may use x, y, z, free parameters, and EARLIER defs only. A def
+          must not be named x, y, z, or a free parameter name.
+        - "objects.p" may be written in terms of the name psi.
+        - Free parameters listed in the task's degrees_of_freedom may appear
+          in expressions; give a value in "params" for each you use (it must
+          lie inside its range).
+        - B must be divergence-free, satisfy B . grad(psi) = 0 and
+          (curl B) x B = grad(p), be non-axisymmetric, and give psi >= 0 with
+          psi = 0 on a closed magnetic axis curve inside the sample box.
+          psi and p must be non-constant. Check these yourself
+          symbolically before answering.
+        - Never claim the object is novel or proven. If you cannot meet a
+          criterion, still output your best candidate and say which
+          criterion you expect to fail in derivation_notes.
+
+  - name: Generator_B
+    type: LlmTransform
+    input: Planner
+    config: *generator_config
+
+  - name: checks_a
+    type: VectorCalculusCheckTransform
+    input: Generator_A
+    config: {source: Generator_A}
+
+  - name: checks_b
+    type: VectorCalculusCheckTransform
+    input: Generator_B
+    config: {source: Generator_B}
+
+  - name: iota_a
+    type: IotaTraceTransform
+    input: Generator_A
+    config: {source: Generator_A, timeout_seconds: 60}
+
+  - name: iota_b
+    type: IotaTraceTransform
+    input: Generator_B
+    config: {source: Generator_B, timeout_seconds: 60}
+
+  - name: criteria_a
+    type: ConstructCriteriaTransform
+    input: [checks_a, iota_a]
+    config: {sources: [checks, iota]}
+
+  - name: criteria_b
+    type: ConstructCriteriaTransform
+    input: [checks_b, iota_b]
+    config: {sources: [checks, iota]}
+
+  - name: construct_critic
+    type: LlmTransform
+    input: [criteria_a, criteria_b]
+    config:
+      model: "{{MODEL_CONSTRUCT_REVIEW}}"
+      max_tokens: 1500
+      system: |
+        You review a construction candidate that already passed a
+        deterministic gate. You receive {"task", "candidate" (the generator's
+        JSON), "criteria" (the deterministic checklist: per-criterion
+        met/unmet/unverified with evidence), "verdict" (computed by code)}.
+        Output ONLY a JSON object, no fences:
+        {"concerns": ["<specific concern>", ...], "unverified_assessment": "<what the unverified/unmet items mean for this candidate>", "looks_trivial": true|false}
+
+        Rules:
+        - The checks are numeric evidence (random-point residuals, a
+          field-line trace), not proof. Say where that matters.
+        - You may not change or dispute the verdict; explain its limits.
+        - Do not judge novelty.
+
+  - name: devils_advocate
+    type: LlmTransform
+    input: construct_critic
+    config:
+      model: "{{MODEL_CONSTRUCT_REVIEW}}"
+      max_tokens: 1500
+      system: |
+        You attack a construction result. You receive the critic's output,
+        the candidate, and the deterministic checklist. Output ONLY a JSON
+        object, no fences:
+        {"strongest_objection": "<one paragraph>", "known_solution_risk": "<is this just a known/relabelled solution, e.g. an axisymmetric field in disguise or an integer-iota family? why or why not>", "unmet_or_unverified": ["<criterion id>", ...]}
+
+        Rules:
+        - Focus on the unmet/unverified list and on whether the candidate
+          is a trivial relabel of something known.
+        - Integer rotational transform means the return map may be the
+          identity; say so if iota is an integer.
+        - Do not claim novelty or proof either way.
+
+  - name: synthesizer
+    type: LlmTransform
+    input: [construct_critic, devils_advocate]
+    config:
+      model: "{{MODEL_CONSTRUCT_REVIEW}}"
+      max_tokens: 2500
+      system: |
+        You write the final report. You receive the task, the winning
+        candidate, the deterministic checklist, a verdict computed by code,
+        the critic's output and the devil's advocate's output. The FIRST
+        line of your answer must be exactly: VERDICT: <the verdict you were
+        given> — never a different one. Then a markdown table with columns
+        criterion | level (hard/soft) | status | evidence, then 3-6 bullets:
+        what was constructed (state B, psi, p), what is unmet or unverified,
+        and the devil's advocate's strongest objection.
+
+        Language rule: CONSTRUCTED means "satisfies the stated criteria as
+        checked here (numeric evidence)". Never say novel, proven, or
+        publishable. Novelty is a human literature check.
