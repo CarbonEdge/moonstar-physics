@@ -135,10 +135,9 @@ async def test_unparseable_plan_falls_back_to_spec_mechanism_hints():
 
 async def test_gateway_failure_returns_failed_with_partial_artifacts():
     seen: list[dict] = []
-    result = await _run(_FULL, seen, fail_node="Generator_B")
-    assert result["status"] == "failed" and "Generator_B" in result["error"]
-    by = _by_name(result)
-    assert "Planner" in by and "Generator_A" in by and "Generator_B" not in by
+    result = await _run(_FULL, seen, fail_node="Planner")
+    assert result["status"] == "failed" and "Planner" in result["error"]
+    assert _by_name(result) == {}
 
 
 async def test_wallclock_budget_zero_fails_fast(monkeypatch, tmp_path):
@@ -189,3 +188,35 @@ async def test_failed_llm_step_is_retried_once_then_succeeds():
                                  transport=httpx.MockTransport(handler))
     assert result["status"] == "completed" and result["verdict"] == "CONSTRUCTED"
     assert counts["Planner"] == 2
+
+
+async def test_one_candidates_generation_failure_only_sinks_that_candidate():
+    seen: list[dict] = []
+    result = await _run(_FULL, seen, fail_node="Derive_B")
+    assert result["status"] == "completed" and result["verdict"] == "CONSTRUCTED"
+    by = _by_name(result)
+    assert by["criteria_b"]["verdict"] == "NOT_FOUND" and "generation failed" in by["criteria_b"]["error"]
+    assert "Derive_B" not in by and "Generator_B" not in by
+
+
+async def test_both_candidates_failing_generation_fails_the_run():
+    seen: list[dict] = []
+    responses = {**_FULL}
+    sessions: dict[str, str] = {}
+
+    def handler(request: httpx.Request) -> httpx.Response:
+        if request.url.path == "/pipelines/run":
+            node = yaml.safe_load(json.loads(request.content)["yaml_spec"])["transforms"][0]["name"]
+            sessions[f"sess-{node}"] = node
+            return httpx.Response(200, json={"session_id": f"sess-{node}"})
+        node = sessions[request.url.path.rsplit("/", 1)[-1]]
+        if node in ("Derive_A", "Derive_B"):
+            return httpx.Response(200, json={"status": "failed", "artifacts": []})
+        return httpx.Response(200, json={
+            "status": "completed", "artifacts": [{"transform_name": node, "data": {"response": responses[node]}}],
+        })
+
+    result = await run_construct(_SPEC, "http://gateway.test", "tok", _PIPELINE, _MODELS,
+                                 transport=httpx.MockTransport(handler))
+    assert result["status"] == "failed" and "Derive_B" in result["error"]
+

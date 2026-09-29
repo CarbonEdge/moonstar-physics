@@ -165,13 +165,23 @@ async def _run_round(
     # Two calls per candidate keep each under the gateway's LLM timeout: a long
     # reasoning "derive" step (free-form maths), then a cheap "formalise" step
     # that turns the derivation into the strict JSON the checkers read.
+    # A candidate whose generation fails (e.g. the reasoning model burns its whole
+    # budget) is NOT_FOUND for that candidate only; the run fails only if BOTH do.
+    gen_errors: dict[str, PipelineRunError] = {}
     for label, assignment in (("A", assign_a), ("B", assign_b)):
-        derive = await llm(f"Derive_{label}", {"task": task, "assignment": assignment})
-        await llm(f"Generator_{label}", {
-            "task": task, "assignment": assignment, "derivation": derive.get("response"),
-        })
+        try:
+            derive = await llm(f"Derive_{label}", {"task": task, "assignment": assignment})
+            await llm(f"Generator_{label}", {
+                "task": task, "assignment": assignment, "derivation": derive.get("response"),
+            })
+        except PipelineRunError as e:
+            gen_errors[label] = e
+            artifacts[f"criteria_{label.lower()}"] = _not_found_row(f"generation failed: {e}")
+    if len(gen_errors) == 2:
+        raise gen_errors["B"]
     for label in ("A", "B"):
-        await _evaluate_candidate(label, f"Generator_{label}", nodes, spec_path, artifacts)
+        if label not in gen_errors:
+            await _evaluate_candidate(label, f"Generator_{label}", nodes, spec_path, artifacts)
 
     verdicts = {l: artifacts[f"criteria_{l.lower()}"]["verdict"] for l in ("A", "B")}
     best = max(("A", "B"), key=lambda l: (_RANK[verdicts[l]], l == "A"))
