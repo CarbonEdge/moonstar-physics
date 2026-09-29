@@ -70,7 +70,8 @@ def _by_name(result):
 
 
 _FULL = {
-    "Planner": _PLAN, "Generator_A": _IOTA2, "Generator_B": _BAD,
+    "Planner": _PLAN, "Derive_A": "derivation A: rotating ellipse", "Derive_B": "derivation B",
+    "Generator_A": _IOTA2, "Generator_B": _BAD,
     "construct_critic": json.dumps({"concerns": [], "unverified_assessment": "ok", "looks_trivial": False}),
     "devils_advocate": json.dumps({"strongest_objection": "integer iota", "known_solution_risk": "possible",
                                    "unmet_or_unverified": ["iota_noninteger"]}),
@@ -84,17 +85,21 @@ async def test_full_round_constructed_and_verdict_line_is_enforced():
     assert result["status"] == "completed"
     assert result["verdict"] == "CONSTRUCTED" and result["best_candidate"] == "A"
     assert [r["node"] for r in seen] == [
-        "Planner", "Generator_A", "Generator_B", "construct_critic", "devils_advocate", "synthesizer",
+        "Planner", "Derive_A", "Generator_A", "Derive_B", "Generator_B",
+        "construct_critic", "devils_advocate", "synthesizer",
     ]
     by = _by_name(result)
     assert by["criteria_a"]["verdict"] == "CONSTRUCTED"
     assert by["criteria_b"]["verdict"] == "NOT_FOUND"
     assert by["synthesizer"]["response"].splitlines()[0] == "VERDICT: CONSTRUCTED"   # LLM said PLAUSIBLE
     # Generators received their own planner assignment.
-    assert seen[1]["initial_input"]["assignment"]["mechanism"] == "axis torsion"
-    assert seen[2]["initial_input"]["assignment"]["mechanism"] == "axial current"
+    assert seen[1]["initial_input"]["assignment"]["mechanism"] == "axis torsion"      # Derive_A
+    assert seen[3]["initial_input"]["assignment"]["mechanism"] == "axial current"     # Derive_B
+    # The formalise step receives the derivation text from its own derive step.
+    assert seen[2]["initial_input"]["derivation"] == _FULL["Derive_A"]
+    assert seen[4]["initial_input"]["derivation"] == _FULL["Derive_B"]
     # Critic sees the winning candidate + its checklist, not the losing one.
-    assert seen[3]["initial_input"]["criteria"]["verdict"] == "CONSTRUCTED"
+    assert seen[5]["initial_input"]["criteria"]["verdict"] == "CONSTRUCTED"
 
 
 async def test_both_candidates_fail_gate_skips_llm_review_and_sandbox(monkeypatch):
@@ -105,7 +110,7 @@ async def test_both_candidates_fail_gate_skips_llm_review_and_sandbox(monkeypatc
     seen: list[dict] = []
     result = await _run({**_FULL, "Generator_A": _BAD}, seen)
     assert result["status"] == "completed" and result["verdict"] == "NOT_FOUND"
-    assert [r["node"] for r in seen] == ["Planner", "Generator_A", "Generator_B"]
+    assert [r["node"] for r in seen] == ["Planner", "Derive_A", "Generator_A", "Derive_B", "Generator_B"]
     by = _by_name(result)
     assert "synthesizer" not in by and "construct_critic" not in by
     assert by["iota_a"]["skipped"] == "gate failed"
@@ -124,7 +129,7 @@ async def test_unparseable_plan_falls_back_to_spec_mechanism_hints():
     result = await _run({**_FULL, "Planner": "not json at all"}, seen)
     hints = load_construct_spec(_SPEC).mechanism_hints
     assert seen[1]["initial_input"]["assignment"]["mechanism"] == hints[0]
-    assert seen[2]["initial_input"]["assignment"]["mechanism"] == hints[1]
+    assert seen[3]["initial_input"]["assignment"]["mechanism"] == hints[1]
     assert _by_name(result)["Planner"].get("planner_fallback") is True
 
 

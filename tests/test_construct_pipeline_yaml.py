@@ -30,7 +30,8 @@ def test_no_unfilled_placeholders():
 def test_node_names_and_types():
     by_name = _spec().by_name()
     assert {n: t.type for n, t in by_name.items()} == {
-        "Planner": "LlmTransform", "Generator_A": "LlmTransform", "Generator_B": "LlmTransform",
+        "Planner": "LlmTransform", "Derive_A": "LlmTransform", "Derive_B": "LlmTransform",
+        "Generator_A": "LlmTransform", "Generator_B": "LlmTransform",
         "checks_a": "VectorCalculusCheckTransform", "checks_b": "VectorCalculusCheckTransform",
         "iota_a": "IotaTraceTransform", "iota_b": "IotaTraceTransform",
         "criteria_a": "ConstructCriteriaTransform", "criteria_b": "ConstructCriteriaTransform",
@@ -42,7 +43,8 @@ def test_node_names_and_types():
 def test_dependency_graph():
     by_name = _spec().by_name()
     assert {n: sorted(t.deps) for n, t in by_name.items()} == {
-        "Planner": [], "Generator_A": ["Planner"], "Generator_B": ["Planner"],
+        "Planner": [], "Derive_A": ["Planner"], "Derive_B": ["Planner"],
+        "Generator_A": ["Derive_A"], "Generator_B": ["Derive_B"],
         "checks_a": ["Generator_A"], "iota_a": ["Generator_A"], "criteria_a": ["checks_a", "iota_a"],
         "checks_b": ["Generator_B"], "iota_b": ["Generator_B"], "criteria_b": ["checks_b", "iota_b"],
         "construct_critic": ["criteria_a", "criteria_b"],
@@ -74,3 +76,23 @@ def test_generator_prompt_states_the_json_schema_and_no_prose_rule():
     for needle in ('"defs"', '"objects"', '"params"', "Cartesian", "ONLY the JSON"):
         assert needle in gen
     assert _spec().by_name()["Generator_A"].config["system"] == _spec().by_name()["Generator_B"].config["system"]
+
+
+def test_derive_uses_pro_and_a_timeout_above_the_gateway_default():
+    by_name = _spec().by_name()
+    models = json.loads(_MODELS.read_text(encoding="utf-8"))
+    for name in ("Derive_A", "Derive_B"):
+        cfg = by_name[name].config
+        assert cfg["model"] == models["MODEL_GENERATOR"]
+        assert cfg["timeout_seconds"] > 180          # moonstar-rs default is 180 s
+        assert cfg["max_tokens"] >= 16000            # reasoning counts against it
+    assert by_name["Derive_A"].config == by_name["Derive_B"].config
+
+
+def test_formalise_step_is_cheap_and_low_reasoning():
+    cfg = _spec().by_name()["Generator_A"].config
+    models = json.loads(_MODELS.read_text(encoding="utf-8"))
+    assert cfg["model"] == models["MODEL_CONSTRUCT_REVIEW"]
+    assert cfg["reasoning"] == {"effort": "low"}
+    assert "derivation" in cfg["system"] and "Do NOT re-derive" in cfg["system"]
+

@@ -17,7 +17,9 @@ transforms:
     type: LlmTransform
     config:
       model: "{{MODEL_PLANNER}}"
-      max_tokens: 2000
+      max_tokens: 4000
+      timeout_seconds: 300
+      reasoning: {effort: low}
       system: |
         You plan a construction task. You receive a task spec (statement,
         unknowns, hard/soft acceptance criteria, mechanism hints, free
@@ -40,16 +42,63 @@ transforms:
         - Do not write the final field yourself. Do not claim any candidate
           is novel or correct.
 
-  - name: Generator_A
+  - name: Derive_A
     type: LlmTransform
     input: Planner
-    config: &generator_config
+    config: &derive_config
       model: "{{MODEL_GENERATOR}}"
-      max_tokens: 8000
+      max_tokens: 24000
+      timeout_seconds: 900
+      reasoning: {effort: medium}
       system: |
-        You construct an explicit closed-form mathematical object that meets
-        a formal spec. You receive {"task": <spec>, "assignment": {"mechanism":
-        ..., "ansatz": ...}}. Work out the construction, then output ONLY the JSON object below — no markdown fences, no prose outside the JSON.
+        You are the derivation stage of a construction pipeline. You receive
+        {"task": <spec>, "assignment": {"mechanism": ..., "ansatz": ...}}.
+        Work out, on paper, an explicit closed-form object that meets the
+        task's hard criteria, following the assigned mechanism. A separate
+        stage will turn your write-up into strict JSON, so your job is the
+        mathematics, not the formatting. Write plain text / markdown with
+        exactly these sections:
+
+        1. Coordinates and ansatz: Cartesian x, y, z only (convert from
+           cylindrical/toroidal coordinates yourself).
+        2. Definitions: every named sub-expression as an explicit formula in
+           x, y, z and the free parameters, in dependency order.
+        3. The fields: B = (Bx, By, Bz), psi, p as explicit formulas.
+        4. Hand verification: for each hard criterion (div B = 0,
+           B . grad(psi) = 0, (curl B) x B = grad(p), psi >= 0 with psi = 0 on
+           a closed axis curve in the sample box, psi and p non-constant, B
+           non-axisymmetric) show the computation or say plainly that you
+           could not complete it.
+        5. Known weaknesses: which criteria you expect to fail and why.
+        6. Parameters: a value for each free parameter you use, inside its range.
+
+        Rules:
+        - Prefer a construction you can verify by hand over an ambitious one
+          you cannot. A known-imperfect candidate with honest weaknesses beats
+          no answer.
+        - Reasoning counts against your output budget: commit to a concrete
+          candidate rather than exploring indefinitely.
+        - Never claim the object is novel or proven.
+
+  - name: Derive_B
+    type: LlmTransform
+    input: Planner
+    config: *derive_config
+
+  - name: Generator_A
+    type: LlmTransform
+    input: Derive_A
+    config: &generator_config
+      model: "{{MODEL_CONSTRUCT_REVIEW}}"
+      max_tokens: 6000
+      timeout_seconds: 300
+      reasoning: {effort: low}
+      system: |
+        You are the formalisation stage of a construction pipeline. You
+        receive {"task": <spec>, "assignment": ..., "derivation": <a written
+        derivation of a closed-form object>}. Turn the derivation's final
+        fields into the strict JSON below. Output ONLY the JSON object below,
+        no markdown fences, no prose outside the JSON.
 
         Schema:
         {
@@ -78,16 +127,18 @@ transforms:
           psi = 0 on a closed magnetic axis curve inside the sample box.
           psi and p must be non-constant. Check these yourself
           symbolically before answering.
-        - Your output budget is limited and reasoning counts against it. Keep
-          internal deliberation short and commit to a concrete candidate; an
-          answer with a known-imperfect candidate beats no answer.
-        - Never claim the object is novel or proven. If you cannot meet a
-          criterion, still output your best candidate and say which
-          criterion you expect to fail in derivation_notes.
+        - Transcribe the derivation faithfully. Do NOT re-derive, simplify or
+          "fix" the mathematics. If the derivation leaves a piece unspecified,
+          make the simplest consistent completion and say so in
+          derivation_notes.
+        - Never claim the object is novel or proven. If the derivation says a
+          criterion is expected to fail, keep the candidate and repeat that in
+          derivation_notes.
+
 
   - name: Generator_B
     type: LlmTransform
-    input: Planner
+    input: Derive_B
     config: *generator_config
 
   - name: checks_a
@@ -125,7 +176,9 @@ transforms:
     input: [criteria_a, criteria_b]
     config:
       model: "{{MODEL_CONSTRUCT_REVIEW}}"
-      max_tokens: 1500
+      max_tokens: 3000
+      timeout_seconds: 300
+      reasoning: {effort: low}
       system: |
         You review a construction candidate that already passed a
         deterministic gate. You receive {"task", "candidate" (the generator's
@@ -145,7 +198,9 @@ transforms:
     input: construct_critic
     config:
       model: "{{MODEL_CONSTRUCT_REVIEW}}"
-      max_tokens: 1500
+      max_tokens: 3000
+      timeout_seconds: 300
+      reasoning: {effort: low}
       system: |
         You attack a construction result. You receive the critic's output,
         the candidate, and the deterministic checklist. Output ONLY a JSON
@@ -164,7 +219,9 @@ transforms:
     input: [construct_critic, devils_advocate]
     config:
       model: "{{MODEL_CONSTRUCT_REVIEW}}"
-      max_tokens: 2500
+      max_tokens: 4000
+      timeout_seconds: 300
+      reasoning: {effort: low}
       system: |
         You write the final report. You receive the task, the winning
         candidate, the deterministic checklist, a verdict computed by code,

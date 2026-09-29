@@ -5,7 +5,7 @@ the moonstar-rs gateway (one single-node session each, via
 local_pipeline._submit_single_node); deterministic nodes run in-process.
 `pipelines/construct.yaml` supplies per-node config only — no control flow.
 
-Flow: Planner -> Generator_A/B -> (checks -> iota -> criteria) per candidate
+Flow: Planner -> Derive_A/B -> Generator_A/B (formalise to JSON) -> (checks -> iota -> criteria) per candidate
 -> if the best verdict is not NOT_FOUND: construct_critic ->
 devils_advocate -> synthesizer. The verdict is computed by code; the
 synthesizer's first line is overwritten to match. Multi-round feedback and
@@ -162,8 +162,14 @@ async def _run_round(
     if fallback:
         planner["planner_fallback"] = True
 
-    await llm("Generator_A", {"task": task, "assignment": assign_a})
-    await llm("Generator_B", {"task": task, "assignment": assign_b})
+    # Two calls per candidate keep each under the gateway's LLM timeout: a long
+    # reasoning "derive" step (free-form maths), then a cheap "formalise" step
+    # that turns the derivation into the strict JSON the checkers read.
+    for label, assignment in (("A", assign_a), ("B", assign_b)):
+        derive = await llm(f"Derive_{label}", {"task": task, "assignment": assignment})
+        await llm(f"Generator_{label}", {
+            "task": task, "assignment": assignment, "derivation": derive.get("response"),
+        })
     for label in ("A", "B"):
         await _evaluate_candidate(label, f"Generator_{label}", nodes, spec_path, artifacts)
 
