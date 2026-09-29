@@ -129,6 +129,22 @@ Phase 2 sandbox templates (e.g. `iota_nonzero`) report `unverified`.
 See `docs/superpowers/specs/2026-09-28-moonstar-physics-construct-pipeline-design.md`
 in the workspace root.
 
+## Construct pipeline (Phase 2: one round)
+
+Planner → two independent Generators → deterministic checks + sandboxed
+field-line trace → checklist → critic / devil's advocate / synthesizer.
+Needs the moonstar-rs gateway (`bash scripts/harness.sh` there; export
+`OPENROUTER_API_KEY` first) and the sandbox image (`bash scripts/build_sandbox_image.sh`).
+
+```bash
+MOONSTAR_AUTH_TOKEN=<token> python scripts/run_construct.py \n    constructs/analytic-3d-mhd-equilibrium.yaml
+```
+
+Prints `VERDICT: CONSTRUCTED | PARTIAL | NOT_FOUND` (computed by code, not
+by the LLM), the checklist, token usage per model, and saves the full run to
+`constructs/<slug>/runs/<session_id>.json`. This spends real money. Numeric
+evidence only: `CONSTRUCTED` is not novelty and not proof.
+
 ## Paper Reviews
 
 Publishes AI-tested reviews of physics papers to a GitHub Pages site under
