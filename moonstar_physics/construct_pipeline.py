@@ -33,6 +33,8 @@ from .local_pipeline import (
 )
 
 _RANK = {"NOT_FOUND": 0, "PARTIAL": 1, "CONSTRUCTED": 2}
+# Generators are long-reasoning calls; the shared 90-poll (180 s) ceiling is too short.
+_LLM_MAX_POLLS = 600  # x _POLL_INTERVAL_SECONDS (2 s) = 20 min per LLM step
 
 
 def _task_payload(spec: ConstructSpec) -> dict[str, Any]:
@@ -141,7 +143,9 @@ async def _run_round(
     task = _task_payload(spec)
 
     async def llm(name: str, payload: dict[str, Any]) -> dict[str, Any]:
-        artifacts[name] = await _submit_single_node(client, gateway_url, token, nodes[name], payload)
+        artifacts[name] = await _submit_single_node(
+            client, gateway_url, token, nodes[name], payload, max_polls=_LLM_MAX_POLLS
+        )
         return artifacts[name]
 
     planner = await llm("Planner", {"task": task})

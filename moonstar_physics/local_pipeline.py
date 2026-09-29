@@ -95,6 +95,7 @@ async def _submit_single_node(
     token: str,
     transform: TransformSpec,
     initial_input: dict[str, Any],
+    max_polls: int | None = None,
 ) -> dict[str, Any]:
     """Submits one LLM transform as its own root-node gateway session and
     returns its artifact data once the session completes.
@@ -115,7 +116,7 @@ async def _submit_single_node(
     submit_resp.raise_for_status()
     session_id = submit_resp.json()["session_id"]
 
-    for _ in range(_MAX_POLLS):
+    for _ in range(max_polls or _MAX_POLLS):
         await asyncio.sleep(_POLL_INTERVAL_SECONDS)
         status_resp = await client.get(f"{gateway_url}/sessions/{session_id}", headers=headers)
         status_resp.raise_for_status()

@@ -155,3 +155,7 @@ async def test_wallclock_budget_zero_fails_fast(monkeypatch, tmp_path):
 ])
 def test_enforce_verdict_line(text, expected):
     assert _enforce_verdict_line(text, "PARTIAL") == expected
+
+def test_llm_polling_ceiling_exceeds_the_shared_default():
+    # Live run 2026-09-29: a v4-pro Generator took longer than the shared 180 s ceiling.
+    assert construct_pipeline._LLM_MAX_POLLS > local_pipeline._MAX_POLLS
