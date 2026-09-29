@@ -70,7 +70,10 @@ transforms:
            non-axisymmetric) show the computation or say plainly that you
            could not complete it.
         5. Known weaknesses: which criteria you expect to fail and why.
-        6. Parameters: a value for each free parameter you use, inside its range.
+        6. Parameters: a value for each degree of freedom you use, inside its
+           range. Every OTHER constant must be a fixed number that you state
+           explicitly (e.g. "major radius 1.0") so it can be written as a
+           literal; do not leave symbolic constants in the final formulas.
 
         Rules:
         - Prefer a construction you can verify by hand over an ambitious one
@@ -113,8 +116,13 @@ transforms:
           think in cylindrical/toroidal coordinates, convert to x, y, z
           yourself before writing any expression.
         - Every expression is a plain math string parseable by sympy
-          (operators + - * / **, sqrt, sin, cos, exp, log, tan, atan2, Abs).
-          No Python code, no function definitions, no lambdas, no imports.
+          (operators + - * / **, sqrt, sin, cos, exp, log, tan, atan, atan2,
+          Abs). No Python code, no function definitions, no lambdas, no imports.
+        - The ONLY free symbols allowed are x, y, z and the task's
+          degrees_of_freedom. Write every other constant (radii, amplitudes,
+          mode numbers) as a numeric literal, using the values from the
+          derivation's Parameters section. Never introduce a new parameter
+          name such as R0 or q0.
         - "defs" are optional named sub-expressions, evaluated in order; a
           def may use x, y, z, free parameters, and EARLIER defs only. A def
           must not be named x, y, z, or a free parameter name.

@@ -42,6 +42,7 @@ _SAFE_GLOBALS: dict[str, Any] = {
     "asin": sympy.asin,
     "acos": sympy.acos,
     "atan": sympy.atan,
+    "atan2": sympy.atan2,
     "sinh": sympy.sinh,
     "cosh": sympy.cosh,
     "tanh": sympy.tanh,

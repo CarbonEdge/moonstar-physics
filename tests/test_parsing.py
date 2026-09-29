@@ -51,3 +51,13 @@ def test_malformed_json_raises():
 def test_json_array_instead_of_object_raises():
     with pytest.raises(NonRetryableTransformError):
         parse_extractor_output({"Extractor": {"response": "[1, 2, 3]"}})
+
+
+def test_safe_parse_supports_atan2_for_toroidal_angles():
+    import sympy
+    from moonstar_physics.maths._safe_parse import safe_parse_expr
+
+    expr = safe_parse_expr("atan2(y, x)", ["x", "y"])
+    assert expr.func == sympy.atan2
+    x, y = sympy.symbols("x y")
+    assert sympy.diff(expr, x) == -y / (x**2 + y**2)
