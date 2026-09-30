@@ -133,6 +133,11 @@ async def _submit_single_node(
         if status in ("failed", "rejected"):
             raise PipelineRunError(f"session {session_id} ({transform.name}) {status}")
 
+    # Best effort: an abandoned session keeps its gateway slot and keeps spending tokens.
+    try:
+        await client.delete(f"{gateway_url}/sessions/{session_id}", headers=headers)
+    except httpx.HTTPError:
+        pass
     raise PipelineRunError(f"session {session_id} ({transform.name}) timed out waiting for completion")
 
 

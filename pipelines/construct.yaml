@@ -52,9 +52,9 @@ transforms:
     input: Planner
     config: &derive_config
       model: "{{MODEL_GENERATOR}}"
-      max_tokens: 24000
+      max_tokens: 16000
       timeout_seconds: 900
-      reasoning: {effort: medium}
+      reasoning: {effort: low}
       system: |
         You are the derivation stage of a construction pipeline. You receive
         {"task": <spec>, "assignment": {"mechanism": ..., "ansatz": ...}}.

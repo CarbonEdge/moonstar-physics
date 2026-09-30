@@ -641,3 +641,28 @@ def test_construct_local_transform_registry_is_awaitable():
         "VectorCalculusCheckTransform", "ConstructCriteriaTransform", "IotaTraceTransform",
     }
     assert all(inspect.iscoroutinefunction(fn) for fn in _CONSTRUCT_LOCAL_TRANSFORMS.values())
+
+
+async def test_timed_out_session_is_cancelled_on_the_gateway(monkeypatch):
+    from moonstar_physics._pipeline_spec import TransformSpec
+
+    deleted: list[str] = []
+
+    def handler(request: httpx.Request) -> httpx.Response:
+        if request.method == "POST":
+            return httpx.Response(200, json={"session_id": "sess-1"})
+        if request.method == "DELETE":
+            deleted.append(request.url.path)
+            return httpx.Response(200, json={"cancelled_count": 1})
+        return httpx.Response(200, json={"status": "running", "artifacts": []})
+
+    monkeypatch.setattr(local_pipeline, "_POLL_INTERVAL_SECONDS", 0)
+    node = TransformSpec(name="Derive_A", type="LlmTransform", config={})
+    async with httpx.AsyncClient(transport=httpx.MockTransport(handler)) as client:
+        try:
+            await local_pipeline._submit_single_node(client, "http://gw.test", "tok", node, {}, max_polls=3)
+            raise AssertionError("expected a timeout")
+        except local_pipeline.PipelineRunError as e:
+            assert "timed out" in str(e)
+    assert deleted == ["/sessions/sess-1"]
+

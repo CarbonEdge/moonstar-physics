@@ -78,18 +78,30 @@ def _format_summary(result: dict[str, Any]) -> str:
     return "\n".join(parts)
 
 
-def _parse_args(argv: list[str]) -> tuple[str, int | None] | None:
-    if len(argv) == 2:
-        return argv[1], None
-    if len(argv) == 4 and argv[2] == "--max-rounds":
-        try:
-            return argv[1], int(argv[3])
-        except ValueError:
+def _parse_args(argv: list[str]) -> tuple[str, int | None, str | None] | None:
+    """`<spec> [--max-rounds N] [--models PATH]` -> (spec, max_rounds, models_path)."""
+    if len(argv) < 2:
+        return None
+    spec, max_rounds, models = argv[1], None, None
+    rest = argv[2:]
+    while rest:
+        if len(rest) < 2:
             return None
-    return None
+        flag, value = rest[0], rest[1]
+        if flag == "--max-rounds":
+            try:
+                max_rounds = int(value)
+            except ValueError:
+                return None
+        elif flag == "--models":
+            models = value
+        else:
+            return None
+        rest = rest[2:]
+    return spec, max_rounds, models
 
 
-async def _run(spec_path: str, max_rounds: int | None) -> int:
+async def _run(spec_path: str, max_rounds: int | None, models_path: str | None = None) -> int:
     gateway_url = os.environ.get("MOONSTAR_GATEWAY_URL", "http://localhost:8000")
     token = os.environ.get("MOONSTAR_AUTH_TOKEN")
     if not token:
@@ -97,7 +109,8 @@ async def _run(spec_path: str, max_rounds: int | None) -> int:
         return 1
     spec = load_construct_spec(spec_path)
     result = await run_construct(
-        spec_path, gateway_url, token, _PIPELINE_PATH, _MODELS_PATH, max_rounds=max_rounds
+        spec_path, gateway_url, token, _PIPELINE_PATH, models_path or _MODELS_PATH,
+        max_rounds=max_rounds,
     )
     saved = _save_run(spec.slug, result["session_id"], result)
     print(_format_summary(result))
@@ -108,7 +121,7 @@ async def _run(spec_path: str, max_rounds: int | None) -> int:
 def main(argv: list[str]) -> int:
     parsed = _parse_args(argv)
     if parsed is None:
-        print("usage: run_construct.py <spec.yaml> [--max-rounds N]", file=sys.stderr)
+        print("usage: run_construct.py <spec.yaml> [--max-rounds N] [--models PATH]", file=sys.stderr)
         return 2
     if not os.environ.get("MOONSTAR_AUTH_TOKEN"):
         print("ERROR: MOONSTAR_AUTH_TOKEN is not set", file=sys.stderr)
