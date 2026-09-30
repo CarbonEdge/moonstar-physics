@@ -62,3 +62,41 @@ def test_bench_requires_a_token(monkeypatch, capsys):
     monkeypatch.delenv("MOONSTAR_AUTH_TOKEN", raising=False)
     assert bench_construct.main(["b.py", "constructs/x.yaml", "--tag", "t"]) == 1
     assert "MOONSTAR_AUTH_TOKEN" in capsys.readouterr().err
+
+
+def test_check_gateway_reports_why_the_gateway_is_unusable():
+    import asyncio
+
+    import httpx
+
+    def ok(request):
+        assert request.headers["Authorization"] == "Bearer tok"
+        return httpx.Response(200, json={"tenant_id": "t"})
+
+    def unauthorized(request):
+        return httpx.Response(401, json={"detail": "Invalid token"})
+
+    def boom(request):
+        raise httpx.ConnectError("refused", request=request)
+
+    def server_error(request):
+        return httpx.Response(503)
+
+    async def check(handler):
+        return await bench_construct.check_gateway("http://gw.test", "tok", transport=httpx.MockTransport(handler))
+
+    assert asyncio.run(check(ok)) is None
+    assert "401" in asyncio.run(check(unauthorized)) and "Access is denied" in asyncio.run(check(unauthorized))
+    assert "unreachable" in asyncio.run(check(boom))
+    assert "503" in asyncio.run(check(server_error))
+
+
+def test_a_crashed_run_is_recorded_as_failed_and_counted_by_the_report():
+    from moonstar_physics.construct_bench import aggregate, summarise_run
+
+    crashed = bench_construct.crashed_result(RuntimeError("401 Unauthorized " + "x" * 500))
+    assert crashed["status"] == "failed" and crashed["error"].startswith("RuntimeError: 401")
+    assert len(crashed["error"]) <= 300
+    s = summarise_run(crashed)
+    assert s["status"] == "failed"
+    assert aggregate([s])["failed"] == 1

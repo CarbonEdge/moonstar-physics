@@ -19,6 +19,8 @@ import os
 import sys
 from pathlib import Path
 
+import httpx
+
 sys.path.insert(0, str(Path(__file__).parent.parent))
 sys.path.insert(0, str(Path(__file__).parent))
 from bench_report import build_report  # noqa: E402
@@ -33,6 +35,28 @@ _ROOT = Path(__file__).parent.parent
 _BENCH_DIR = _ROOT / "constructs" / "_bench"
 _PIPELINE = _ROOT / "pipelines" / "construct.yaml"
 _DEFAULT_MODELS = _ROOT / "pipelines" / "models.json"
+
+
+async def check_gateway(gateway_url: str, token: str, transport: httpx.BaseTransport | None = None) -> str | None:
+    """Fail fast before a long bench: None if the gateway answers /whoami with this token, else why not.
+    (A pre-flight once burned four configs on 401s: `harness.sh token` hands back garbage when the
+    running gateway locks the binary it wants to rebuild.)"""
+    try:
+        async with httpx.AsyncClient(timeout=10, transport=transport) as client:
+            r = await client.get(f"{gateway_url}/whoami", headers={"Authorization": f"Bearer {token}"})
+    except httpx.HTTPError as e:
+        return f"gateway unreachable at {gateway_url}: {e}"
+    if r.status_code == 401:
+        return ("gateway rejected the token (401). If `harness.sh token` printed 'Access is denied', stop the "
+                "gateway, `cargo build -p moonstar-gateway-bin`, `harness.sh serve`, then mint a token again")
+    if r.status_code != 200:
+        return f"gateway /whoami returned HTTP {r.status_code}"
+    return None
+
+
+def crashed_result(exc: BaseException) -> dict:
+    """A run that raised is a FAILED run in the report, never silently dropped."""
+    return {"status": "failed", "error": f"{type(exc).__name__}: {exc}"[:300], "artifacts": []}
 
 
 def parse_args(argv: list[str]) -> dict | None:
@@ -62,6 +86,10 @@ async def _bench(opts: dict) -> int:
     if not token:
         print("ERROR: MOONSTAR_AUTH_TOKEN is not set", file=sys.stderr)
         return 1
+    problem = await check_gateway(gateway_url, token)
+    if problem:
+        print(f"ERROR: {problem}", file=sys.stderr)
+        return 1
     spec = load_construct_spec(opts["spec"])
     models_path = Path(opts["models"]) if opts["models"] else _DEFAULT_MODELS
     out_dir = _BENCH_DIR / f"{datetime.date.today().isoformat()}-{opts['tag']}"
@@ -77,9 +105,12 @@ async def _bench(opts: dict) -> int:
     }
     (out_dir / "meta.json").write_text(json.dumps(meta, indent=1), encoding="utf-8")
     for i in range(1, opts["n"] + 1):
-        result = await run_construct(
-            opts["spec"], gateway_url, token, _PIPELINE, models_path, max_rounds=opts["max_rounds"]
-        )
+        try:
+            result = await run_construct(
+                opts["spec"], gateway_url, token, _PIPELINE, models_path, max_rounds=opts["max_rounds"]
+            )
+        except Exception as e:  # noqa: BLE001 - record the crash, keep the campaign going
+            result = crashed_result(e)
         (out_dir / f"run-{i}.json").write_text(json.dumps(result, indent=1, ensure_ascii=False), encoding="utf-8")
         print(f"run {i}/{opts['n']}: {result.get('status')} {result.get('verdict')} "
               f"rounds={len(result.get('rounds', []))} elapsed={result.get('elapsed_seconds')}s", flush=True)
