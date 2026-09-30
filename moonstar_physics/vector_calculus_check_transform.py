@@ -206,12 +206,13 @@ async def VectorCalculusCheckTransform(
     spec = load_construct_spec(config["spec_path"])
     source = config.get("source", "Generator_A")
     tolerance = float(config.get("tolerance", _DEFAULT_TOLERANCE))
+    seed = int(config.get("seed", _SEED))
     candidate = _load_candidate(input, source)
 
     checkable = [c for c in spec.criteria if c.check in _CHECKABLE]
     dof_names = [d.name for d in spec.degrees_of_freedom]
     base_out = {
-        "n_draws": _N_DRAWS, "seed": _SEED,
+        "n_draws": _N_DRAWS, "seed": seed,
         "_model": "none", "_provider": "none", "_input_tokens": 0, "_output_tokens": 0,
     }
 
@@ -225,7 +226,7 @@ async def VectorCalculusCheckTransform(
 
     fixed = candidate.get("params") if isinstance(candidate.get("params"), dict) else {}
     arg_syms = [*COORDS, *(sympy.Symbol(n) for n in dof_names)]
-    arrays = _sample(spec, fixed, np.random.default_rng(_SEED))
+    arrays = _sample(spec, fixed, np.random.default_rng(seed))
     env = {"B": B, "psi": psi, "p": p}
 
     results = []

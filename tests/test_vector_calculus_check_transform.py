@@ -160,3 +160,23 @@ async def test_custom_source_name(ctx):
     inp = {"Gen_B": {"response": json.dumps(_IOTA2)}}
     out = await VectorCalculusCheckTransform(inp, {"spec_path": _SPEC, "source": "Gen_B"}, ctx)
     assert {r["id"]: r["status"] for r in out["results"]}["div_free"] == "pass"
+
+
+async def test_seed_config_changes_the_draws_and_is_reported():
+    from moonstar_physics._compat import SessionContext as _Ctx
+    from moonstar_physics.vector_calculus_check_transform import VectorCalculusCheckTransform as _T
+
+    root = Path(__file__).parent.parent
+    spec = str(root / "constructs" / "analytic-3d-mhd-equilibrium.yaml")
+    cand = json.loads((Path(__file__).parent / "fixtures" / "iota2_candidate.json").read_text(encoding="utf-8"))
+    inp = {"G": {"response": json.dumps(cand)}}
+
+    def resid(out):
+        return {r["id"]: r.get("max_residual") for r in out["results"] if r["id"] == "div_free"}
+
+    a0 = await _T(inp, {"spec_path": spec, "source": "G"}, _Ctx())
+    a0b = await _T(inp, {"spec_path": spec, "source": "G", "seed": 0}, _Ctx())
+    a1 = await _T(inp, {"spec_path": spec, "source": "G", "seed": 1}, _Ctx())
+    assert a0["seed"] == 0 and a1["seed"] == 1
+    assert resid(a0) == resid(a0b)            # default is seed 0, reproducible
+    assert resid(a0) != resid(a1)             # a different seed draws different points
