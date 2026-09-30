@@ -25,7 +25,12 @@ transforms:
         unknowns, hard/soft acceptance criteria, mechanism hints, free
         parameters). Two independent generators will each propose an explicit
         closed-form object; your job is to give them DIFFERENT starting points
-        so their attempts are not correlated. Output ONLY the JSON object
+        so their attempts are not correlated. If "history" is non-empty this
+        is a REPAIR round: it lists previous rounds (per candidate: verdict,
+        unmet/unverified criteria, numeric evidence, derivation notes). Say in
+        "target" which unmet criterion this round attacks, keep what already
+        passes, and give the two generators DIFFERENT repair strategies.
+        Output ONLY the JSON object
         below, no markdown fences, no commentary.
 
         Schema:
@@ -54,7 +59,13 @@ transforms:
         You are the derivation stage of a construction pipeline. You receive
         {"task": <spec>, "assignment": {"mechanism": ..., "ansatz": ...}}.
         Work out, on paper, an explicit closed-form object that meets the
-        task's hard criteria, following the assigned mechanism. A separate
+        task's hard criteria, following the assigned mechanism. If the input
+        also has a "feedback" object, this is a REPAIR round: "feedback" holds
+        the best previous candidate ("previous_best": its defs, objects and
+        params), the checker's evidence for it ("evidence": criterion id ->
+        status and residual) and its unmet criteria. Keep what already
+        passes, change the minimum needed to fix the failing criteria, and
+        say in section 5 what you changed and why. A separate
         stage will turn your write-up into strict JSON, so your job is the
         mathematics, not the formatting. Write plain text / markdown with
         exactly these sections:
@@ -64,11 +75,9 @@ transforms:
         2. Definitions: every named sub-expression as an explicit formula in
            x, y, z and the free parameters, in dependency order.
         3. The fields: B = (Bx, By, Bz), psi, p as explicit formulas.
-        4. Hand verification: for each hard criterion (div B = 0,
-           B . grad(psi) = 0, (curl B) x B = grad(p), psi >= 0 with psi = 0 on
-           a closed axis curve in the sample box, psi and p non-constant, B
-           non-axisymmetric) show the computation or say plainly that you
-           could not complete it.
+        4. Hand verification: for each hard criterion in the task's criteria
+           list, show the computation or say plainly that you could not
+           complete it.
         5. Known weaknesses: which criteria you expect to fail and why.
         6. Parameters: a value for each degree of freedom you use, inside its
            range. Every OTHER constant must be a fixed number that you state
@@ -130,11 +139,8 @@ transforms:
         - Free parameters listed in the task's degrees_of_freedom may appear
           in expressions; give a value in "params" for each you use (it must
           lie inside its range).
-        - B must be divergence-free, satisfy B . grad(psi) = 0 and
-          (curl B) x B = grad(p), be non-axisymmetric, and give psi >= 0 with
-          psi = 0 on a closed magnetic axis curve inside the sample box.
-          psi and p must be non-constant. Check these yourself
-          symbolically before answering.
+        - Meeting the task's hard criteria is the derivation's job, not
+          yours: see the transcription rule below.
         - Transcribe the derivation faithfully. Do NOT re-derive, simplify or
           "fix" the mathematics. If the derivation leaves a piece unspecified,
           make the simplest consistent completion and say so in

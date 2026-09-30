@@ -96,3 +96,19 @@ def test_formalise_step_is_cheap_and_low_reasoning():
     assert cfg["reasoning"] == {"effort": "low"}
     assert "derivation" in cfg["system"] and "Do NOT re-derive" in cfg["system"]
 
+
+def test_prompts_are_spec_agnostic():
+    by_name = _spec().by_name()
+    for name in ("Derive_A", "Generator_A"):
+        text = by_name[name].config["system"]
+        assert "axisymmetric" not in text.lower(), name      # spec-specific criterion must come from the task
+        assert "curl B" not in text, name
+
+
+def test_planner_and_derive_prompts_describe_repair_rounds():
+    by_name = _spec().by_name()
+    planner = by_name["Planner"].config["system"]
+    assert "history" in planner and "repair" in planner.lower()
+    derive = by_name["Derive_A"].config["system"]
+    assert "feedback" in derive and "REPAIR" in derive and "previous_best" in derive
+
