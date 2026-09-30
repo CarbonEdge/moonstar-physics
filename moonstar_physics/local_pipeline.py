@@ -116,29 +116,46 @@ async def _submit_single_node(
     submit_resp.raise_for_status()
     session_id = submit_resp.json()["session_id"]
 
-    for _ in range(max_polls or _MAX_POLLS):
-        await asyncio.sleep(_POLL_INTERVAL_SECONDS)
-        status_resp = await client.get(f"{gateway_url}/sessions/{session_id}", headers=headers)
-        status_resp.raise_for_status()
-        status_data = status_resp.json()
-        status = status_data.get("status")
-
-        if status == "completed":
-            for artifact in status_data.get("artifacts", []):
-                if artifact.get("transform_name") == transform.name:
-                    return artifact.get("data") or {}
-            raise PipelineRunError(
-                f"session {session_id} ({transform.name}) completed but produced no matching artifact"
-            )
-        if status in ("failed", "rejected"):
-            raise PipelineRunError(f"session {session_id} ({transform.name}) {status}")
-
-    # Best effort: an abandoned session keeps its gateway slot and keeps spending tokens.
+    finished = False
     try:
-        await client.delete(f"{gateway_url}/sessions/{session_id}", headers=headers)
-    except httpx.HTTPError:
+        for _ in range(max_polls or _MAX_POLLS):
+            await asyncio.sleep(_POLL_INTERVAL_SECONDS)
+            status_resp = await client.get(f"{gateway_url}/sessions/{session_id}", headers=headers)
+            status_resp.raise_for_status()
+            status_data = status_resp.json()
+            status = status_data.get("status")
+
+            if status == "completed":
+                finished = True
+                for artifact in status_data.get("artifacts", []):
+                    if artifact.get("transform_name") == transform.name:
+                        return artifact.get("data") or {}
+                raise PipelineRunError(
+                    f"session {session_id} ({transform.name}) completed but produced no matching artifact"
+                )
+            if status in ("failed", "rejected"):
+                finished = True
+                raise PipelineRunError(f"session {session_id} ({transform.name}) {status}")
+
+        raise PipelineRunError(
+            f"session {session_id} ({transform.name}) timed out waiting for completion"
+        )
+    finally:
+        # Any exit that is not a terminal gateway status (poll timeout, a caller-side
+        # asyncio timeout/cancellation, an HTTP error) leaves the session running: it would
+        # keep its gateway slot and keep spending tokens (a zombie held a slot for 3 hours).
+        if not finished:
+            await _cancel_session(client, gateway_url, headers, session_id)
+
+
+async def _cancel_session(
+    client: httpx.AsyncClient, gateway_url: str, headers: dict[str, str], session_id: str
+) -> None:
+    """Best-effort DELETE /sessions/{id}; never raises."""
+    try:
+        await asyncio.shield(client.delete(f"{gateway_url}/sessions/{session_id}", headers=headers))
+    except (httpx.HTTPError, asyncio.CancelledError):
         pass
-    raise PipelineRunError(f"session {session_id} ({transform.name}) timed out waiting for completion")
 
 
 def _render_solo_yaml(transform: TransformSpec) -> str:

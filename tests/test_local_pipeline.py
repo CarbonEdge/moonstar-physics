@@ -666,3 +666,49 @@ async def test_timed_out_session_is_cancelled_on_the_gateway(monkeypatch):
             assert "timed out" in str(e)
     assert deleted == ["/sessions/sess-1"]
 
+
+async def test_caller_side_cancellation_also_cancels_the_gateway_session(monkeypatch):
+    import asyncio
+    from moonstar_physics._pipeline_spec import TransformSpec
+
+    deleted: list[str] = []
+
+    def handler(request: httpx.Request) -> httpx.Response:
+        if request.method == "POST":
+            return httpx.Response(200, json={"session_id": "sess-9"})
+        if request.method == "DELETE":
+            deleted.append(request.url.path)
+            return httpx.Response(200, json={"cancelled_count": 1})
+        return httpx.Response(200, json={"status": "running", "artifacts": []})
+
+    monkeypatch.setattr(local_pipeline, "_POLL_INTERVAL_SECONDS", 0.01)
+    node = TransformSpec(name="Derive_A", type="LlmTransform", config={})
+    async with httpx.AsyncClient(transport=httpx.MockTransport(handler)) as client:
+        try:
+            async with asyncio.timeout(0.1):          # like run_construct's wallclock budget
+                await local_pipeline._submit_single_node(client, "http://gw.test", "tok", node, {}, max_polls=10_000)
+        except TimeoutError:
+            pass
+    assert deleted == ["/sessions/sess-9"]
+
+
+async def test_completed_session_is_not_cancelled(monkeypatch):
+    from moonstar_physics._pipeline_spec import TransformSpec
+
+    deleted: list[str] = []
+
+    def handler(request: httpx.Request) -> httpx.Response:
+        if request.method == "POST":
+            return httpx.Response(200, json={"session_id": "sess-2"})
+        if request.method == "DELETE":
+            deleted.append(request.url.path)
+            return httpx.Response(200, json={})
+        return httpx.Response(200, json={"status": "completed", "artifacts": [
+            {"transform_name": "Derive_A", "data": {"response": "ok"}}]})
+
+    monkeypatch.setattr(local_pipeline, "_POLL_INTERVAL_SECONDS", 0)
+    node = TransformSpec(name="Derive_A", type="LlmTransform", config={})
+    async with httpx.AsyncClient(transport=httpx.MockTransport(handler)) as client:
+        out = await local_pipeline._submit_single_node(client, "http://gw.test", "tok", node, {})
+    assert out == {"response": "ok"} and deleted == []
+
