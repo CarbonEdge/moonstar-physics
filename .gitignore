@@ -5,3 +5,6 @@ __pycache__/
 .env
 *.egg-info/
 /runs/
+# raw campaign / run output: summaries are committed, raw JSON is not (roadmap decision D5)
+constructs/_bench/**/*.json
+constructs/*/runs/
