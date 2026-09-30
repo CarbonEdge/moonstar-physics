@@ -45,7 +45,8 @@ def _fast(monkeypatch):
 
 
 def _gateway(script: dict[str, list[str]], seen: list[dict], fail: dict[str, set[int]] | None = None,
-             model: str = "deepseek/deepseek-v4-pro", tokens: tuple[int, int] = (10, 20)):
+             model: str = "deepseek/deepseek-v4-pro", tokens: tuple[int, int] = (10, 20),
+             reported_cost: float | None = None):
     """script: node -> responses consumed per call (the last one repeats).
     fail: node -> set of 1-based call numbers that fail at the gateway."""
     fail = fail or {}
@@ -71,7 +72,8 @@ def _gateway(script: dict[str, list[str]], seen: list[dict], fail: dict[str, set
                 "status": "completed",
                 "artifacts": [{"transform_name": node, "data": {
                     "response": text, "_model": model,
-                    "_input_tokens": tokens[0], "_output_tokens": tokens[1]}}],
+                    "_input_tokens": tokens[0], "_output_tokens": tokens[1],
+                    **({"_cost_usd": reported_cost} if reported_cost is not None else {})}}],
             })
         raise AssertionError(f"unexpected request {request.method} {request.url}")
 
@@ -269,3 +271,21 @@ def test_llm_polling_ceiling_exceeds_the_shared_default():
 ])
 def test_enforce_verdict_line(text, expected):
     assert _enforce_verdict_line(text, "PARTIAL") == expected
+
+
+async def test_reported_gateway_cost_makes_the_run_cost_exact():
+    seen: list[dict] = []
+    transport = _gateway(_FULL, seen, reported_cost=0.01)
+    result = await run_construct(_SPEC, "http://gateway.test", "tok", _PIPELINE, _MODELS,
+                                 transport=transport, max_rounds=1)
+    llm_calls = len(seen)                                   # every LLM call carried _cost_usd = 0.01
+    assert result["cost_is_exact"] is True
+    assert result["cost_usd"] == pytest.approx(0.01 * llm_calls)
+    assert result["cost_reported_usd"] == pytest.approx(result["cost_usd"]) and result["cost_estimated_usd"] == 0.0
+
+
+async def test_no_reported_cost_falls_back_to_the_estimate_and_is_flagged():
+    seen: list[dict] = []
+    result = await _run(_FULL, seen)
+    assert result["cost_is_exact"] is False and result["cost_reported_usd"] == 0.0
+    assert result["cost_estimated_usd"] == pytest.approx(result["cost_usd"]) and result["cost_usd"] > 0

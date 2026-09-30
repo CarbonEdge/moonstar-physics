@@ -73,3 +73,13 @@ def test_main_requires_token(monkeypatch, capsys):
 
 def test_main_usage_error():
     assert script.main(["run_construct.py"]) == 2
+
+
+def test_format_summary_distinguishes_reported_from_estimated_cost():
+    exact = {**_result(), "cost_is_exact": True, "cost_truncated_usd": 0.004}
+    text = script._format_summary(exact)
+    assert "reported by OpenRouter" in text and "$0.0040 wasted on truncated retries" in text
+    est = {**_result(), "cost_is_exact": False, "cost_reported_usd": 0.0}
+    assert "ESTIMATED" in script._format_summary(est)
+    partial = {**_result(), "cost_is_exact": False, "cost_reported_usd": 0.005}
+    assert "$0.0050 of it reported" in script._format_summary(partial)

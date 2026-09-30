@@ -262,5 +262,6 @@ Measure before tuning. No model/prompt/parameter change counts as an improvement
   runs the config N times sequentially (one live run at a time) into
   `constructs/_bench/<date>-<tag>/`; `python scripts/bench_report.py <dir>` rebuilds `summary.md`.
   Commit `summary.md` only; raw run JSON is git-ignored. **All costs are provisional** (token x
-  price table; the gateway reports 0.0) and N < 10 prints a warning; read the Wilson intervals.
+  price table) unless every run's cost came from the gateway-reported OpenRouter cost (P6.1, `_cost_usd`), in which case
+  the report says so; N < 10 prints a warning; read the Wilson intervals.
 

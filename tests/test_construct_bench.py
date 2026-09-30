@@ -87,3 +87,16 @@ def test_trim_run_drops_free_text_but_keeps_candidates_and_criteria():
     assert "script" not in by["iota_a"] and "stdout" not in by["iota_a"]
     assert "response" in by["Generator_A"] and "verdict" in by["criteria_a"]
     assert "response" in {a["transform_name"]: a["data"] for a in full["rounds"][0]["artifacts"]}["Derive_A"]   # input untouched
+
+
+def test_report_says_reported_when_every_run_cost_is_exact_else_provisional():
+    from moonstar_physics.construct_bench import COST_LABEL_EXACT
+
+    exact = {**_run(), "cost_is_exact": True, "cost_truncated_usd": 0.02}
+    s_exact, s_est = summarise_run(exact), summarise_run(_run())
+    assert s_exact["cost_is_exact"] is True and s_est["cost_is_exact"] is False
+    only_exact = render_report({"tag": "t"}, aggregate([s_exact, s_exact]), [s_exact, s_exact])
+    assert COST_LABEL_EXACT in only_exact and COST_LABEL not in only_exact
+    assert "(est.)" not in only_exact and "wasted on truncated attempts" in only_exact
+    mixed = render_report({"tag": "t"}, aggregate([s_exact, s_est]), [s_exact, s_est])
+    assert COST_LABEL in mixed and COST_LABEL_EXACT not in mixed and "(est.)" in mixed

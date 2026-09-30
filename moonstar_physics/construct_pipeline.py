@@ -23,7 +23,7 @@ import httpx
 
 from ._compat import NonRetryableTransformError
 from ._pipeline_spec import PipelineSpec, TransformSpec, render_pipeline_yaml
-from .construct_cost import load_prices, run_cost_usd, usage_by_model
+from .construct_cost import load_prices, run_cost_breakdown, run_cost_usd, usage_by_model
 from .construct_spec import GATE_CHECKS, ConstructSpec, load_construct_spec
 from .local_pipeline import (
     _CONSTRUCT_LOCAL_TRANSFORMS,
@@ -395,12 +395,14 @@ async def run_construct(
 
     best_h = max(history, key=_round_score)
     all_datas = [d for r in raw.values() for d in r.values()] + list(review.values())
-    total_cost, unpriced = run_cost_usd(all_datas, prices)
+    cost = run_cost_breakdown(all_datas, prices)
     return {
         "status": "completed", "session_id": session_id, "verdict": best_h["verdict"],
         "best_candidate": best_h["best_candidate"], "best_round": best_h["round"],
-        "stop_reason": stop_reason, "rounds": rounds, "cost_usd": total_cost,
-        "unpriced_models": unpriced, "token_usage": usage_by_model(all_datas),
+        "stop_reason": stop_reason, "rounds": rounds, "cost_usd": cost["total_usd"],
+        "cost_reported_usd": cost["reported_usd"], "cost_estimated_usd": cost["estimated_usd"],
+        "cost_truncated_usd": cost["truncated_usd"], "cost_is_exact": cost["is_exact"],
+        "unpriced_models": cost["unpriced_models"], "token_usage": usage_by_model(all_datas),
         "elapsed_seconds": round(time.monotonic() - started, 2),
         "artifacts": _packed(raw[best_h["round"]]) + _packed(review),
     }

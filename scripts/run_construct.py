@@ -67,8 +67,13 @@ def _format_summary(result: dict[str, Any]) -> str:
         ]
     parts += [
         "", f"elapsed: {result.get('elapsed_seconds')}s",
-        f"cost: ${result.get('cost_usd', 0.0):.4f} estimated from successful calls "
-        "(failed/retried calls are not counted)",
+        (f"cost: ${result.get('cost_usd', 0.0):.4f} reported by OpenRouter per call "
+         f"(incl. ${result.get('cost_truncated_usd', 0.0):.4f} wasted on truncated retries; "
+         "calls that failed or timed out entirely are not counted)")
+        if result.get("cost_is_exact") else
+        f"cost: ${result.get('cost_usd', 0.0):.4f} ESTIMATED (token x price table"
+        + (f"; ${result.get('cost_reported_usd', 0.0):.4f} of it reported" if result.get("cost_reported_usd") else "")
+        + "; failed/retried calls are not counted)",
     ]
     if result.get("unpriced_models"):
         parts.append(f"UNPRICED models (cost undercounted): {', '.join(result['unpriced_models'])}")

@@ -1,9 +1,11 @@
 """Token -> USD accounting for construct runs.
 
-Costs are estimates: they count only artifacts that carry token usage
-(successful LLM calls). Failed or retried calls leave no artifact and are
-not counted. A model absent from the price table is reported, never priced
-at zero silently.
+Cost source, in order of preference per artifact:
+  1. `_cost_usd` reported by the gateway (OpenRouter's usage.cost, incl. the cost of truncated
+     retries inside the call): EXACT for those calls;
+  2. token counts x the dated price table: an ESTIMATE (providers differ in price, ~3x seen).
+A model absent from the price table is reported, never priced at zero silently. Only artifacts that
+carry token usage count; calls that failed or timed out entirely leave no artifact and are not counted.
 """
 from __future__ import annotations
 
@@ -34,22 +36,44 @@ def artifact_usage(data: Any) -> tuple[str, int, int] | None:
     return str(model), int(data.get("_input_tokens") or 0), int(data.get("_output_tokens") or 0)
 
 
-def run_cost_usd(
+def _number(v: Any) -> float | None:
+    return float(v) if isinstance(v, (int, float)) and not isinstance(v, bool) and v >= 0 else None
+
+
+def run_cost_breakdown(
     artifact_datas: Iterable[Any], prices: dict[str, dict[str, float]]
-) -> tuple[float, list[str]]:
-    total = 0.0
+) -> dict[str, Any]:
+    """Total cost split by source. `is_exact` is True only when every costed artifact carried a
+    gateway-reported `_cost_usd` and no model was left unpriced."""
+    reported = estimated = truncated = 0.0
     unpriced: set[str] = set()
     for data in artifact_datas:
         usage = artifact_usage(data)
         if usage is None:
             continue
         model, tokens_in, tokens_out = usage
+        own = _number(data.get("_cost_usd"))
+        if own is not None:
+            reported += own
+            truncated += _number(data.get("_cost_truncated_usd")) or 0.0   # already inside `own`
+            continue
         price = prices.get(model)
         if price is None:
             unpriced.add(model)
             continue
-        total += tokens_in * price["input"] + tokens_out * price["output"]
-    return total, sorted(unpriced)
+        estimated += tokens_in * price["input"] + tokens_out * price["output"]
+    return {
+        "total_usd": reported + estimated, "reported_usd": reported, "estimated_usd": estimated,
+        "truncated_usd": truncated, "unpriced_models": sorted(unpriced),
+        "is_exact": estimated == 0.0 and not unpriced,
+    }
+
+
+def run_cost_usd(
+    artifact_datas: Iterable[Any], prices: dict[str, dict[str, float]]
+) -> tuple[float, list[str]]:
+    b = run_cost_breakdown(artifact_datas, prices)
+    return b["total_usd"], b["unpriced_models"]
 
 
 def usage_by_model(artifact_datas: Iterable[Any]) -> dict[str, dict[str, int]]:

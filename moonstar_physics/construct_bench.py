@@ -2,8 +2,8 @@
 
 No I/O and no network, so every number in a report can be reproduced from saved run JSON.
 Honesty rules baked in:
-  * every $ figure is labelled PROVISIONAL (token x price table; the gateway itself reports 0.0)
-    until P6.1 lands real cost reporting;
+  * every $ figure is labelled PROVISIONAL (token x price table) unless EVERY run's cost came from
+    the gateway-reported OpenRouter cost (P6.1), in which case it is labelled as reported;
   * proportions carry a Wilson 95 % interval, and the report warns when N < 10;
   * a run that failed (gateway/wallclock) is counted as failed, never silently dropped.
 """
@@ -16,6 +16,7 @@ from collections import Counter
 from typing import Any
 
 COST_LABEL = "provisional (token x price table; gateway reports 0.0)"
+COST_LABEL_EXACT = "reported by OpenRouter per call, incl. truncated retries; failed/timed-out calls are not counted"
 _DROP_TEXT = ("Planner", "Derive_A", "Derive_B", "construct_critic", "devils_advocate", "synthesizer")
 
 
@@ -75,6 +76,8 @@ def summarise_run(result: dict[str, Any]) -> dict[str, Any]:
         "first_partial_round": first_partial, "first_constructed_round": first_constructed,
         "regressions": regressions, "per_round": per_round,
         "cost_usd": float(result.get("cost_usd", 0.0)), "elapsed_seconds": result.get("elapsed_seconds"),
+        "cost_is_exact": bool(result.get("cost_is_exact", False)),
+        "cost_truncated_usd": float(result.get("cost_truncated_usd", 0.0) or 0.0),
         "unpriced_models": result.get("unpriced_models", []),
     }
 
@@ -103,6 +106,8 @@ def aggregate(summaries: list[dict[str, Any]]) -> dict[str, Any]:
         "regressions_per_run": _stats([s["regressions"] for s in done]),
         "cost_usd": _stats([s["cost_usd"] for s in done]),
         "elapsed_seconds": _stats([s["elapsed_seconds"] for s in done]),
+        "cost_all_exact": bool(done) and all(s.get("cost_is_exact") for s in done),
+        "cost_truncated_usd": _stats([s.get("cost_truncated_usd", 0.0) for s in done]),
         "unpriced_models": sorted({m for s in done for m in s.get("unpriced_models", [])}),
     }
 
@@ -134,13 +139,15 @@ def render_report(meta: dict[str, Any], agg: dict[str, Any], summaries: list[dic
         f"- rounds to first PARTIAL-or-better: {_fmt_stats(agg['rounds_to_first_partial'], '.1f')}",
         f"- regression events per run (best candidate got worse vs previous round): {_fmt_stats(agg['regressions_per_run'], '.1f')}",
         "", "## Cost and time", "",
-        f"- cost per run, USD, **{COST_LABEL}**: {_fmt_stats(agg['cost_usd'], '.3f')}",
+        f"- cost per run, USD, **{COST_LABEL_EXACT if agg['cost_all_exact'] else COST_LABEL}**: "
+        f"{_fmt_stats(agg['cost_usd'], '.3f')}",
+        f"- of which wasted on truncated attempts, USD: {_fmt_stats(agg['cost_truncated_usd'], '.3f')}",
         f"- elapsed per run, seconds: {_fmt_stats(agg['elapsed_seconds'], '.0f')}",
     ]
     if agg["unpriced_models"]:
         lines.append(f"- UNPRICED models (cost undercounted): {', '.join(agg['unpriced_models'])}")
     lines += ["", "## Runs", "",
-              "| # | status | verdict | rounds | stop | final unmet (best) | min unmet | regressions | cost (provisional) |",
+              "| # | status | verdict | rounds | stop | final unmet (best) | min unmet | regressions | cost |",
               "|---|---|---|---|---|---|---|---|---|"]
     for i, s in enumerate(summaries, 1):
         if s["status"] != "completed":
@@ -148,7 +155,7 @@ def render_report(meta: dict[str, Any], agg: dict[str, Any], summaries: list[dic
             continue
         lines.append(
             f"| {i} | ok | {s['verdict']} | {s['rounds']} | {s['stop_reason']} | {s['final_unmet_hard']} "
-            f"| {s['min_n_unmet']} | {s['regressions']} | ${s['cost_usd']:.3f} |"
+            f"| {s['min_n_unmet']} | {s['regressions']} | ${s['cost_usd']:.3f}{'' if s.get('cost_is_exact') else ' (est.)'} |"
         )
     return "\n".join(lines) + "\n"
 
