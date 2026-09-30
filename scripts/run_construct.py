@@ -1,11 +1,14 @@
 """Run one round of the construct pipeline against a ConstructSpec.
 
 Usage:
-    MOONSTAR_AUTH_TOKEN=<token> python scripts/run_construct.py constructs/analytic-3d-mhd-equilibrium.yaml
+    MOONSTAR_AUTH_TOKEN=<token> python scripts/run_construct.py constructs/analytic-3d-mhd-equilibrium.yaml [--max-rounds N]
 
 Env vars:
     MOONSTAR_GATEWAY_URL   default http://localhost:8000
     MOONSTAR_AUTH_TOKEN    required — `bash scripts/harness.sh token` in moonstar-rs
+
+Runs up to spec.budget.max_rounds repair rounds (override with --max-rounds);
+stops early on CONSTRUCTED.
 
 Real LLM spend happens here (Planner + 2 Generators + up to 3 review steps).
 Every run is saved to constructs/<slug>/runs/<session_id>.json with all
@@ -45,21 +48,6 @@ def _save_run(slug: str, session_id: str, result: dict[str, Any]) -> Path:
     return out
 
 
-def _usage_totals(result: dict[str, Any]) -> dict[str, dict[str, int]]:
-    totals: dict[str, dict[str, int]] = {}
-    for art in result.get("artifacts", []):
-        data = art.get("data") or {}
-        if not ("_input_tokens" in data or "_output_tokens" in data):
-            continue
-        model = data.get("_model", "unknown")
-        if model == "none":
-            continue
-        row = totals.setdefault(model, {"input_tokens": 0, "output_tokens": 0})
-        row["input_tokens"] += int(data.get("_input_tokens") or 0)
-        row["output_tokens"] += int(data.get("_output_tokens") or 0)
-    return totals
-
-
 def _format_summary(result: dict[str, Any]) -> str:
     if result.get("status") != "completed":
         return f"RUN FAILED: {result.get('error', 'unknown error')}"
@@ -68,20 +56,49 @@ def _format_summary(result: dict[str, Any]) -> str:
     parts = [_format(by_name[f"criteria_{best}"])]
     if "synthesizer" in by_name:
         parts += ["", "--- synthesizer ---", by_name["synthesizer"].get("response", "")]
-    parts += ["", f"elapsed: {result.get('elapsed_seconds')}s", "token usage (measure cost/round from this):"]
-    usage = _usage_totals(result)
+    rounds = result.get("rounds") or []
+    if rounds:
+        parts += ["", f"rounds: {len(rounds)} (stop: {result.get('stop_reason')}, "
+                      f"best: round {result.get('best_round')})"]
+        parts += [
+            f"  round {r['round']}: {r['verdict']} (best candidate {r['best_candidate']}, "
+            f"${r['cost_usd']:.4f})"
+            for r in rounds
+        ]
+    parts += [
+        "", f"elapsed: {result.get('elapsed_seconds')}s",
+        f"cost: ${result.get('cost_usd', 0.0):.4f} estimated from successful calls "
+        "(failed/retried calls are not counted)",
+    ]
+    if result.get("unpriced_models"):
+        parts.append(f"UNPRICED models (cost undercounted): {', '.join(result['unpriced_models'])}")
+    parts.append("token usage:")
+    usage = result.get("token_usage") or {}
     parts += [f"  {m}: in={u['input_tokens']} out={u['output_tokens']}" for m, u in usage.items()] or ["  (none reported)"]
     return "\n".join(parts)
 
 
-async def _run(spec_path: str) -> int:
+def _parse_args(argv: list[str]) -> tuple[str, int | None] | None:
+    if len(argv) == 2:
+        return argv[1], None
+    if len(argv) == 4 and argv[2] == "--max-rounds":
+        try:
+            return argv[1], int(argv[3])
+        except ValueError:
+            return None
+    return None
+
+
+async def _run(spec_path: str, max_rounds: int | None) -> int:
     gateway_url = os.environ.get("MOONSTAR_GATEWAY_URL", "http://localhost:8000")
     token = os.environ.get("MOONSTAR_AUTH_TOKEN")
     if not token:
         print("ERROR: MOONSTAR_AUTH_TOKEN is not set", file=sys.stderr)
         return 1
     spec = load_construct_spec(spec_path)
-    result = await run_construct(spec_path, gateway_url, token, _PIPELINE_PATH, _MODELS_PATH)
+    result = await run_construct(
+        spec_path, gateway_url, token, _PIPELINE_PATH, _MODELS_PATH, max_rounds=max_rounds
+    )
     saved = _save_run(spec.slug, result["session_id"], result)
     print(_format_summary(result))
     print(f"\nsaved: {saved}")
@@ -89,13 +106,14 @@ async def _run(spec_path: str) -> int:
 
 
 def main(argv: list[str]) -> int:
-    if len(argv) != 2:
-        print("usage: run_construct.py <spec.yaml>", file=sys.stderr)
+    parsed = _parse_args(argv)
+    if parsed is None:
+        print("usage: run_construct.py <spec.yaml> [--max-rounds N]", file=sys.stderr)
         return 2
     if not os.environ.get("MOONSTAR_AUTH_TOKEN"):
         print("ERROR: MOONSTAR_AUTH_TOKEN is not set", file=sys.stderr)
         return 1
-    return asyncio.run(_run(argv[1]))
+    return asyncio.run(_run(*parsed))
 
 
 if __name__ == "__main__":

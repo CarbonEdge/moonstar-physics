@@ -129,45 +129,54 @@ Phase 2 sandbox templates (e.g. `iota_nonzero`) report `unverified`.
 See `docs/superpowers/specs/2026-09-28-moonstar-physics-construct-pipeline-design.md`
 in the workspace root.
 
-## Construct pipeline (Phase 2: one round)
+## Construct pipeline (Phase 3: repair loop)
 
-Planner -> per candidate (x2): **Derive** (v4-pro, long reasoning, free-form
-maths) -> **Formalise** (flash, strict JSON) -> deterministic checks + sandboxed
-field-line trace -> checklist -> critic / devil's advocate / synthesizer (only
-for a candidate that passed the symbolic gate). The verdict is computed by
-code; the synthesizer's first line is overwritten to match it.
+Up to `max_rounds` rounds. Each round: Planner -> per candidate (concurrent)
+**Derive** (v4-pro, long reasoning) -> **Formalise** (flash, strict JSON) ->
+deterministic checks + sandboxed field-line trace -> checklist. After a round
+that is not CONSTRUCTED, the best candidate so far and its evidence are fed
+back for a minimal repair (round n checks with seed n). The critic / devil's
+advocate / synthesizer run once, on the best candidate, if it is not
+NOT_FOUND. The verdict is computed by code.
 
 Needs:
 - the moonstar-rs gateway **built from a version whose `LlmTransform` supports
   the optional `timeout_seconds` and `reasoning` config** (moonstar-rs master,
   commits 09ebe11 + 430619c - rebuild the gateway binary if yours predates it;
   without it every reasoning call over 180 s fails with "error decoding
-  response body"). `bash scripts/harness.sh`
-  there, with `OPENROUTER_API_KEY` exported.
+  response body"). `bash scripts/harness.sh` there, with `OPENROUTER_API_KEY`
+  exported. If `harness.sh token` says "Access is denied", the running
+  gateway is locking the binary it wants to rebuild: `harness.sh stop`,
+  `cargo build -p moonstar-gateway-bin`, then `serve` again.
 - Docker running, and the sandbox image (`bash scripts/build_sandbox_image.sh`).
 
 ```bash
-MOONSTAR_AUTH_TOKEN=<token> python scripts/run_construct.py     constructs/analytic-3d-mhd-equilibrium.yaml
+MOONSTAR_AUTH_TOKEN=<token> python scripts/run_construct.py     constructs/analytic-3d-mhd-equilibrium.yaml [--max-rounds 3]
 ```
 
-Expect **~30-50 minutes** and real spend (Derive is ~10+ minutes per
-candidate; LLM steps get a 20 min polling ceiling and one retry). Prints
-`VERDICT: CONSTRUCTED | PARTIAL | NOT_FOUND`, the checklist, token usage per
-model (successful calls only), and saves the full run - candidates, filled
-iota scripts, sandbox stdout, checklists - to
-`constructs/<slug>/runs/<session_id>.json`.
+Expect ~15-50 minutes per round (Derive is ~10+ minutes; candidates run
+concurrently) and cents of spend per round (see the printed cost; prices in
+`pipelines/prices.json`). Prints `VERDICT: CONSTRUCTED | PARTIAL | NOT_FOUND`,
+the checklist, per-round verdicts, cost and token usage, and saves the full
+run - every round's candidates, filled iota scripts, sandbox stdout,
+checklists - to `constructs/<slug>/runs/<session_id>.json`.
 
 Reading a result:
+- The top-level verdict is the BEST round's, not the last. `stop_reason` is one
+  of `constructed`, `max_rounds`, `max_usd`, `wallclock`, `round_failed`.
 - `NOT_FOUND` means a *gate* criterion (div B / B.grad psi / force balance) was
   unmet; the checklist still shows which other criteria passed. The iota trace
   is skipped when the gate fails (its rows are `unverified`).
+- Iota is judged on every seed surface (magnetic shear makes them differ).
 - A candidate whose generation fails is `NOT_FOUND` on its own (`error` field
   in its `criteria_*` artifact); the run fails only if both do.
 - Numeric evidence only: `CONSTRUCTED` is not novelty and not proof.
 
-Known limits (Phase 3): single round, no feedback loop, no `max_usd`
-enforcement, critic/devil/synthesizer not yet exercised live, Derive steps can
-exhaust their token budget on reasoning (v4-pro) and return nothing.
+Known limits: the checker requires objects B, psi, p (so a second spec must be
+in the same object family, e.g. `constructs/axisymmetric-mhd-equilibrium.yaml`,
+a known-answer control); `max_usd` is checked at round boundaries only; cost
+counts successful calls only; Derive steps can exhaust their token budget on
+reasoning (v4-pro) and return nothing.
 
 ## Paper Reviews
 

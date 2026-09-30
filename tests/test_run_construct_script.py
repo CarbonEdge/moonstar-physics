@@ -12,10 +12,13 @@ import run_construct as script  # noqa: E402
 def _result(verdict="PARTIAL"):
     return {
         "status": "completed", "session_id": "local-abc", "verdict": verdict, "best_candidate": "A",
-        "elapsed_seconds": 12.3,
+        "best_round": 2, "stop_reason": "max_rounds", "elapsed_seconds": 12.3, "cost_usd": 0.0123,
+        "unpriced_models": [], "token_usage": {"m/pro": {"input_tokens": 500, "output_tokens": 950}},
+        "rounds": [
+            {"round": 1, "verdict": "NOT_FOUND", "best_candidate": "B", "cost_usd": 0.005, "artifacts": []},
+            {"round": 2, "verdict": verdict, "best_candidate": "A", "cost_usd": 0.0073, "artifacts": []},
+        ],
         "artifacts": [
-            {"transform_name": "Planner", "data": {"response": "{}", "_model": "m/pro", "_input_tokens": 100, "_output_tokens": 50}},
-            {"transform_name": "Generator_A", "data": {"response": "{}", "_model": "m/pro", "_input_tokens": 400, "_output_tokens": 900}},
             {"transform_name": "criteria_a", "data": {
                 "verdict": verdict, "unmet_hard": [], "unverified_hard": ["iota_nonzero"],
                 "checklist": [{"id": "div_free", "hard": True, "status": "met", "note": "",
@@ -33,21 +36,31 @@ def test_save_run_writes_full_payload_under_construct_slug(tmp_path, monkeypatch
     assert json.loads(path.read_text(encoding="utf-8")) == _result()
 
 
-def test_usage_totals_group_by_model_and_skip_artifacts_without_usage():
-    assert script._usage_totals(_result()) == {"m/pro": {"input_tokens": 500, "output_tokens": 950}}
-
-
-def test_format_summary_leads_with_verdict_and_states_the_language_rule():
+def test_format_summary_leads_with_verdict_and_shows_rounds_and_cost():
     text = script._format_summary(_result())
     assert text.splitlines()[0] == "VERDICT: PARTIAL"
     assert "div_free" in text and "report" in text
-    assert "m/pro" in text and "500" in text
+    assert "rounds: 2" in text and "stop: max_rounds" in text and "best: round 2" in text
+    assert "round 1: NOT_FOUND" in text and "round 2: PARTIAL" in text
+    assert "$0.0123" in text and "m/pro" in text and "500" in text
     assert "not novelty" in text.lower()
 
 
+def test_format_summary_flags_unpriced_models():
+    r = _result()
+    r["unpriced_models"] = ["mystery/model"]
+    assert "mystery/model" in script._format_summary(r)
+
+
 def test_format_summary_for_failed_run_shows_error():
-    text = script._format_summary({"status": "failed", "error": "boom", "artifacts": []})
-    assert "boom" in text
+    assert "boom" in script._format_summary({"status": "failed", "error": "boom", "artifacts": []})
+
+
+def test_parse_args_reads_max_rounds():
+    assert script._parse_args(["run_construct.py", "s.yaml"]) == ("s.yaml", None)
+    assert script._parse_args(["run_construct.py", "s.yaml", "--max-rounds", "3"]) == ("s.yaml", 3)
+    assert script._parse_args(["run_construct.py"]) is None
+    assert script._parse_args(["run_construct.py", "s.yaml", "--max-rounds", "x"]) is None
 
 
 def test_main_requires_token(monkeypatch, capsys):
