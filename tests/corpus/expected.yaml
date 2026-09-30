@@ -1,0 +1,130 @@
+# Labelled adversarial corpus: what a CORRECT checker must say about each candidate.
+# Labels are decided by reading the candidate, never by freezing current output.
+# `spec`: mhd = constructs/analytic-3d-mhd-equilibrium.yaml, axisym = constructs/axisymmetric-mhd-equilibrium.yaml
+# A CONSTRUCTED label is only allowed for candidates whose why: says they are genuine.
+
+iota2_published:
+  spec: mhd
+  verdict: CONSTRUCTED
+  unmet_hard: []
+  unverified_hard: []
+  why: "Landreman's published iota=2 nonaxisymmetric equilibrium (closed axis, iota = -2, shear-free)."
+
+solovev_known_answer:
+  spec: axisym
+  verdict: CONSTRUCTED
+  unmet_hard: []
+  unverified_hard: []
+  why: "Textbook Solov'ev Grad-Shafranov equilibrium psi = 0.5(R^2-1)^2 + 0.5 R^2 z^2, p = 1 - 5 psi (sheared iota ~1.9)."
+
+axisym_model_found_a:
+  spec: axisym
+  verdict: CONSTRUCTED
+  unmet_hard: []
+  unverified_hard: []
+  why: "Model-found (live run 2026-09-30) Solov'ev-type equilibrium, psi = (R^2-1)^2/4 + z^2 with a toroidal function f; axis is the circle R=1."
+
+axisym_model_found_b:
+  spec: axisym
+  verdict: CONSTRUCTED
+  unmet_hard: []
+  unverified_hard: []
+  why: "Second model-found axisymmetric equilibrium from the same run, psi = (R^2-1)^2 + z^2; axis R=1, z=0."
+
+mhd_round5_axisymmetric_equilibrium:
+  spec: mhd
+  verdict: PARTIAL
+  unmet_hard: [nonaxisym]
+  unverified_hard: []
+  why: "Exact axisymmetric Solov'ev equilibrium (v4-pro round 5). Everything holds except the spec's nonaxisymmetry; the model's own notes say it was sacrificed. A correct PARTIAL, not a failure of the checker."
+
+screw_pinch_ellipse:
+  spec: mhd
+  verdict: PARTIAL
+  unmet_hard: []
+  unverified_hard: [iota_nonzero]
+  why: "z-independent screw pinch (the false CONSTRUCTED of 2026-09-30). psi = 0 only on the straight line x=y=0, not a closed toroidal axis."
+
+screw_pinch_psi_def:
+  spec: mhd
+  verdict: PARTIAL
+  unmet_hard: []
+  unverified_hard: [iota_nonzero]
+  why: "z-independent cylinder with psi defined through defs; straight axis on the z-axis."
+
+screw_pinch_shifted_axis:
+  spec: mhd
+  verdict: PARTIAL
+  unmet_hard: []
+  unverified_hard: [iota_nonzero]
+  why: "z-independent screw pinch whose straight axis is x=-0.25 (negative rho at phi=0); still a line, not a ring."
+
+screw_pinch_tilted_a:
+  spec: mhd
+  verdict: PARTIAL
+  unmet_hard: []
+  unverified_hard: [iota_nonzero]
+  why: "z-independent cylinder with a tilted elliptic cross-section and a constant axial field; straight axis."
+
+screw_pinch_tilted_b:
+  spec: mhd
+  verdict: PARTIAL
+  unmet_hard: []
+  unverified_hard: [iota_nonzero]
+  why: "z-independent cylinder, axial field eps*psi-like; straight axis."
+
+wrong_force_balance_psi_nonneg:
+  spec: mhd
+  verdict: NOT_FOUND
+  unmet_hard: [force_balance, psi_nonneg, p_nonconstant]
+  unverified_hard: [iota_nonzero]
+  why: "Real v4-pro round-1 candidate; force balance wrong at every sample (relative residual ~1), psi negative somewhere, p constant."
+
+wrong_div_flux_force:
+  spec: mhd
+  verdict: NOT_FOUND
+  unmet_hard: [div_free, flux_surface, force_balance]
+  unverified_hard: [iota_nonzero]
+  why: "Real v4-pro round-4 candidate that regressed on divergence and flux-surface as well."
+
+wrong_only_force_balance_closest:
+  spec: mhd
+  verdict: NOT_FOUND
+  unmet_hard: [force_balance]
+  unverified_hard: [iota_nonzero]
+  why: "Closest real failure (v4.1-flash round 3): div B and B.grad(psi) hold exactly, force balance wrong everywhere. NOT_FOUND because force balance is a gate."
+
+synthetic_bad_divergence:
+  spec: mhd
+  verdict: NOT_FOUND
+  unmet_hard: [div_free, flux_surface, force_balance, nonaxisym]
+  unverified_hard: [iota_nonzero]
+  why: "B = (x, y, z): div B = 3."
+
+synthetic_zero_field:
+  spec: mhd
+  verdict: PARTIAL
+  unmet_hard: [p_nonconstant, nonaxisym]
+  unverified_hard: [iota_nonzero]
+  why: "B = 0 satisfies every identity vacuously; must never be CONSTRUCTED (p constant, no toroidal structure)."
+
+synthetic_undefined_everywhere:
+  spec: mhd
+  verdict: NOT_FOUND
+  unmet_hard: [force_balance]
+  unverified_hard: [div_free, flux_surface, nonaxisym, iota_nonzero]
+  why: "Bx = sqrt(-1-x^2) is complex on the whole box (criteria unverified, never passed). force_balance is genuinely unmet because curl B vanishes symbolically while grad p = (1,0,0)."
+
+synthetic_screw_pinch_off_z_axis:
+  spec: mhd
+  verdict: PARTIAL
+  unmet_hard: []
+  unverified_hard: [iota_nonzero]
+  why: "Straight axis on the line x=1, y=0 (a ring at phi=0 only). Caught today by the incidental B_phi sign change around a loop that does not enclose the z-axis; the closed-axis guard (psi = 0 at every phi) is the principled defence."
+
+synthetic_localised_singularity:
+  spec: mhd
+  verdict: NOT_FOUND
+  unmet_hard: [force_balance]
+  unverified_hard: [iota_nonzero]
+  why: "The valid iota=2 field plus a pressure term that only bites near one interior point. A few bad points inside the domain still fail force balance (strict by design)."

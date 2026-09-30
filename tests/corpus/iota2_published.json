@@ -1,0 +1,21 @@
+{
+ "defs": {
+  "a": "sqrt(1+epsilon)",
+  "b": "sqrt(1-epsilon)",
+  "s": "(x/a)**2+(y/b)**2",
+  "F": "sqrt(2*s-s**2-4*z**2)",
+  "Bx": "(2*z*x-(a/b)*F*y)/s",
+  "By": "(2*z*y+(b/a)*F*x)/s",
+  "Bz": "1-s",
+  "psi": "(x**2+y**2+4*z**2+Bx**2+By**2+Bz**2-2+epsilon**2)/4"
+ },
+ "objects": {
+  "B": [
+   "Bx",
+   "By",
+   "Bz"
+  ],
+  "psi": "psi",
+  "p": "1-2*psi"
+ }
+}

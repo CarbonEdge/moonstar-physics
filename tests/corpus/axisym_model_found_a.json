@@ -1,0 +1,18 @@
+{
+ "defs": {
+  "R": "sqrt(x**2 + y**2)",
+  "psi_expr": "((R**2 - 1)**2)/4 + z**2",
+  "f_sq": "2 - 4*psi_expr",
+  "f": "sqrt(f_sq)"
+ },
+ "objects": {
+  "B": [
+   "(-2*x*z - y*f)/R**2",
+   "(-2*y*z + x*f)/R**2",
+   "R**2 - 1"
+  ],
+  "psi": "psi_expr",
+  "p": "2 - 2*psi"
+ },
+ "params": {}
+}

@@ -1,0 +1,15 @@
+{
+ "defs": {},
+ "objects": {
+  "B": [
+   "4*y + epsilon*x",
+   "-2*x - epsilon*y",
+   "1.0"
+  ],
+  "psi": "x**2 + 2*y**2 + epsilon*x*y",
+  "p": "100 - 6*psi"
+ },
+ "params": {
+  "epsilon": 0.5
+ }
+}
