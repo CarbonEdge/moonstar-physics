@@ -1,0 +1,3028 @@
+{
+ "status": "completed",
+ "session_id": "local-726d6eb12104",
+ "verdict": "PARTIAL",
+ "best_candidate": "A",
+ "best_round": 5,
+ "stop_reason": "max_rounds",
+ "rounds": [
+  {
+   "round": 1,
+   "verdict": "NOT_FOUND",
+   "best_candidate": "A",
+   "cost_usd": 0.07610686896,
+   "artifacts": [
+    {
+     "transform_name": "Planner",
+     "data": {
+      "_input_tokens": 944,
+      "_model": "deepseek/deepseek-v4.1-flash",
+      "_output_tokens": 392,
+      "_provider": "openrouter",
+      "tool_calls": []
+     }
+    },
+    {
+     "transform_name": "Derive_B",
+     "data": {
+      "_input_tokens": 1261,
+      "_model": "deepseek/deepseek-v4-pro",
+      "_output_tokens": 16000,
+      "_provider": "openrouter",
+      "tool_calls": []
+     }
+    },
+    {
+     "transform_name": "Derive_A",
+     "data": {
+      "_input_tokens": 1235,
+      "_model": "deepseek/deepseek-v4-pro",
+      "_output_tokens": 16000,
+      "_provider": "openrouter",
+      "tool_calls": []
+     }
+    },
+    {
+     "transform_name": "Generator_B",
+     "data": {
+      "_input_tokens": 17633,
+      "_model": "deepseek/deepseek-v4.1-flash",
+      "_output_tokens": 627,
+      "_provider": "openrouter",
+      "response": "{\n  \"defs\": {\n    \"R\": \"sqrt(x**2 + y**2)\",\n    \"alpha\": \"atan2(y, x)\",\n    \"psi\": \"((R - 1.0)*cos(2*alpha) + z*sin(2*alpha))**2/(0.5**2) + (-(R - 1.0)*sin(2*alpha) + z*cos(2*alpha))**2/(0.3**2)\"\n  },\n  \"objects\": {\n    \"B\": [\n      \"-(x/R**2)*((2*((R - 1.0)*cos(2*alpha) + z*sin(2*alpha))*sin(2*alpha))/(0.5**2) + (2*(-(R - 1.0)*sin(2*alpha) + z*cos(2*alpha))*cos(2*alpha))/(0.3**2)) - 0.5*y/R**2\",\n      \"-(y/R**2)*((2*((R - 1.0)*cos(2*alpha) + z*sin(2*alpha))*sin(2*alpha))/(0.5**2) + (2*(-(R - 1.0)*sin(2*alpha) + z*cos(2*alpha))*cos(2*alpha))/(0.3**2)) + 0.5*x/R**2\",\n      \"(1/R)*((2*((R - 1.0)*cos(2*alpha) + z*sin(2*alpha))*cos(2*alpha))/(0.5**2) - (2*(-(R - 1.0)*sin(2*alpha) + z*cos(2*alpha))*sin(2*alpha))/(0.3**2))\"\n    ],\n    \"psi\": \"((R - 1.0)*cos(2*alpha) + z*sin(2*alpha))**2/(0.5**2) + (-(R - 1.0)*sin(2*alpha) + z*cos(2*alpha))**2/(0.3**2)\",\n    \"p\": \"0.0\"\n  },\n  \"params\": {},\n  \"derivation_notes\": \"Transcribed the rotating-ellipse ansatz with a=0.5, b=0.3, k=2, R0=1.0, and constant toroidal field F0=0.5. This satisfies div(B)=0, B\u00b7\u2207\u03c8=0, and p=p(\u03c8)\u22650. However, as derived, exact force balance (curl B)\u00d7B=\u2207p cannot be achieved with this ansatz; the given derivation concludes that the \u03c6-component of force balance forces p' to depend on R and u,v (not only on \u03c8), so the hard force_balance criterion is expected to fail. The candidate is retained per transcription rules, with this failure noted.\"\n}",
+      "tool_calls": []
+     }
+    },
+    {
+     "transform_name": "Generator_A",
+     "data": {
+      "_input_tokens": 17688,
+      "_model": "deepseek/deepseek-v4.1-flash",
+      "_output_tokens": 403,
+      "_provider": "openrouter",
+      "response": "{\"defs\": {\"R\": \"sqrt(x**2 + y**2)\", \"phi\": \"atan2(y, x)\", \"u\": \"R - 1.0\", \"C\": \"cos(3*phi)\", \"S\": \"sin(3*phi)\", \"Gx\": \"(2*u + 0.2*C)*x/R + (3*0.2*u*S)*y/R**2\", \"Gy\": \"(2*u + 0.2*C)*y/R - (3*0.2*u*S)*x/R**2\"}, \"objects\": {\"B\": [\"-2*z*x/R**2\", \"-2*z*y/R**2\", \"(2*u + 0.2*C)/R\"], \"psi\": \"u**2 + z**2 + 0.2*u*C\", \"p\": \"0\"}, \"params\": {\"epsilon\": 0.2}, \"derivation_notes\": \"Transcribed the derivation's final vacuum candidate: it sets F(psi)=0 (to keep dot(B,grad(psi))=0 exactly), giving B = grad(psi) x grad(phi) = (-2zx/R^2, -2zy/R^2, (2(R-R0)+eps*R0*cos(3phi))/R). Divergence-free and flux-surface hold identically. The derivation explicitly states that force balance FAILS for this psi, so p is set to the constant 0 as the simplest consistent completion; it also states iota_nonzero FAILS (field lines lie in constant-phi planes since B_phi=0, giving iota=0). psi_nonneg is also expected to fail in parts of the sample box (psi has a negative minimum -eps^2*R0^2*cos^2(3phi)/4 at z=0). Keeping the candidate per the honest-weakness rule.\"}",
+      "tool_calls": []
+     }
+    },
+    {
+     "transform_name": "checks_a",
+     "data": {
+      "results": [
+       {
+        "id": "div_free",
+        "check": "divergence_zero",
+        "status": "pass",
+        "n_valid": 20000,
+        "max_residual": 9.094947017729282e-13
+       },
+       {
+        "id": "flux_surface",
+        "check": "identity_zero",
+        "status": "pass",
+        "n_valid": 20000,
+        "max_residual": 1.1368683772161603e-13
+       },
+       {
+        "id": "force_balance",
+        "check": "identity_zero",
+        "status": "fail",
+        "n_valid": 20000,
+        "max_residual": 1893153.2920956926
+       },
+       {
+        "id": "psi_nonneg",
+        "check": "numeric_sample",
+        "status": "fail",
+        "n_valid": 20000,
+        "value": -0.009727620275695424
+       },
+       {
+        "id": "psi_nonconstant",
+        "check": "numeric_sample",
+        "status": "pass",
+        "n_valid": 20000,
+        "value": 1.5352979737238592
+       },
+       {
+        "id": "p_nonconstant",
+        "check": "numeric_sample",
+        "status": "fail",
+        "n_valid": 20000,
+        "value": 0.0
+       },
+       {
+        "id": "nonaxisym",
+        "check": "numeric_sample",
+        "status": "pass",
+        "n_valid": 20000,
+        "value": 24.34453779251777
+       }
+      ],
+      "n_draws": 20000,
+      "seed": 1,
+      "_model": "none",
+      "_provider": "none",
+      "_input_tokens": 0,
+      "_output_tokens": 0
+     }
+    },
+    {
+     "transform_name": "iota_a",
+     "data": {
+      "results": [],
+      "skipped": "gate failed"
+     }
+    },
+    {
+     "transform_name": "criteria_a",
+     "data": {
+      "verdict": "NOT_FOUND",
+      "checklist": [
+       {
+        "id": "div_free",
+        "hard": true,
+        "check": "divergence_zero",
+        "status": "met",
+        "note": "",
+        "evidence": {
+         "id": "div_free",
+         "check": "divergence_zero",
+         "status": "pass",
+         "n_valid": 20000,
+         "max_residual": 9.094947017729282e-13
+        }
+       },
+       {
+        "id": "flux_surface",
+        "hard": true,
+        "check": "identity_zero",
+        "status": "met",
+        "note": "",
+        "evidence": {
+         "id": "flux_surface",
+         "check": "identity_zero",
+         "status": "pass",
+         "n_valid": 20000,
+         "max_residual": 1.1368683772161603e-13
+        }
+       },
+       {
+        "id": "force_balance",
+        "hard": true,
+        "check": "identity_zero",
+        "status": "unmet",
+        "note": "",
+        "evidence": {
+         "id": "force_balance",
+         "check": "identity_zero",
+         "status": "fail",
+         "n_valid": 20000,
+         "max_residual": 1893153.2920956926
+        }
+       },
+       {
+        "id": "psi_nonneg",
+        "hard": true,
+        "check": "numeric_sample",
+        "status": "unmet",
+        "note": "",
+        "evidence": {
+         "id": "psi_nonneg",
+         "check": "numeric_sample",
+         "status": "fail",
+         "n_valid": 20000,
+         "value": -0.009727620275695424
+        }
+       },
+       {
+        "id": "psi_nonconstant",
+        "hard": true,
+        "check": "numeric_sample",
+        "status": "met",
+        "note": "",
+        "evidence": {
+         "id": "psi_nonconstant",
+         "check": "numeric_sample",
+         "status": "pass",
+         "n_valid": 20000,
+         "value": 1.5352979737238592
+        }
+       },
+       {
+        "id": "p_nonconstant",
+        "hard": true,
+        "check": "numeric_sample",
+        "status": "unmet",
+        "note": "",
+        "evidence": {
+         "id": "p_nonconstant",
+         "check": "numeric_sample",
+         "status": "fail",
+         "n_valid": 20000,
+         "value": 0.0
+        }
+       },
+       {
+        "id": "nonaxisym",
+        "hard": true,
+        "check": "numeric_sample",
+        "status": "met",
+        "note": "",
+        "evidence": {
+         "id": "nonaxisym",
+         "check": "numeric_sample",
+         "status": "pass",
+         "n_valid": 20000,
+         "value": 24.34453779251777
+        }
+       },
+       {
+        "id": "iota_nonzero",
+        "hard": true,
+        "check": "sandbox_experiment",
+        "status": "unverified",
+        "note": "field-line trace, |iota| > 1e-3",
+        "evidence": null
+       },
+       {
+        "id": "iota_noninteger",
+        "hard": false,
+        "check": "sandbox_experiment",
+        "status": "unverified",
+        "note": "field-line trace, iota not within 1e-3 of an integer",
+        "evidence": null
+       },
+       {
+        "id": "novel",
+        "hard": false,
+        "check": "manual",
+        "status": "unverified",
+        "note": "human literature check",
+        "evidence": null
+       }
+      ],
+      "unmet_hard": [
+       "force_balance",
+       "psi_nonneg",
+       "p_nonconstant"
+      ],
+      "unverified_hard": [
+       "iota_nonzero"
+      ],
+      "_model": "none",
+      "_provider": "none",
+      "_input_tokens": 0,
+      "_output_tokens": 0
+     }
+    },
+    {
+     "transform_name": "checks_b",
+     "data": {
+      "results": [
+       {
+        "id": "div_free",
+        "check": "divergence_zero",
+        "status": "pass",
+        "n_valid": 20000,
+        "max_residual": 1.4551915228366852e-11
+       },
+       {
+        "id": "flux_surface",
+        "check": "identity_zero",
+        "status": "fail",
+        "n_valid": 20000,
+        "max_residual": 12421.10398620936
+       },
+       {
+        "id": "force_balance",
+        "check": "identity_zero",
+        "status": "fail",
+        "n_valid": 20000,
+        "max_residual": 246365414.01197988
+       },
+       {
+        "id": "psi_nonneg",
+        "check": "numeric_sample",
+        "status": "pass",
+        "n_valid": 20000,
+        "value": 4.3301932039368696e-05
+       },
+       {
+        "id": "psi_nonconstant",
+        "check": "numeric_sample",
+        "status": "pass",
+        "n_valid": 20000,
+        "value": 14.18415526117352
+       },
+       {
+        "id": "p_nonconstant",
+        "check": "numeric_sample",
+        "status": "fail",
+        "n_valid": 20000,
+        "value": 0.0
+       },
+       {
+        "id": "nonaxisym",
+        "check": "numeric_sample",
+        "status": "pass",
+        "n_valid": 20000,
+        "value": 1200.6516451919647
+       }
+      ],
+      "n_draws": 20000,
+      "seed": 1,
+      "_model": "none",
+      "_provider": "none",
+      "_input_tokens": 0,
+      "_output_tokens": 0
+     }
+    },
+    {
+     "transform_name": "iota_b",
+     "data": {
+      "results": [],
+      "skipped": "gate failed"
+     }
+    },
+    {
+     "transform_name": "criteria_b",
+     "data": {
+      "verdict": "NOT_FOUND",
+      "checklist": [
+       {
+        "id": "div_free",
+        "hard": true,
+        "check": "divergence_zero",
+        "status": "met",
+        "note": "",
+        "evidence": {
+         "id": "div_free",
+         "check": "divergence_zero",
+         "status": "pass",
+         "n_valid": 20000,
+         "max_residual": 1.4551915228366852e-11
+        }
+       },
+       {
+        "id": "flux_surface",
+        "hard": true,
+        "check": "identity_zero",
+        "status": "unmet",
+        "note": "",
+        "evidence": {
+         "id": "flux_surface",
+         "check": "identity_zero",
+         "status": "fail",
+         "n_valid": 20000,
+         "max_residual": 12421.10398620936
+        }
+       },
+       {
+        "id": "force_balance",
+        "hard": true,
+        "check": "identity_zero",
+        "status": "unmet",
+        "note": "",
+        "evidence": {
+         "id": "force_balance",
+         "check": "identity_zero",
+         "status": "fail",
+         "n_valid": 20000,
+         "max_residual": 246365414.01197988
+        }
+       },
+       {
+        "id": "psi_nonneg",
+        "hard": true,
+        "check": "numeric_sample",
+        "status": "met",
+        "note": "",
+        "evidence": {
+         "id": "psi_nonneg",
+         "check": "numeric_sample",
+         "status": "pass",
+         "n_valid": 20000,
+         "value": 4.3301932039368696e-05
+        }
+       },
+       {
+        "id": "psi_nonconstant",
+        "hard": true,
+        "check": "numeric_sample",
+        "status": "met",
+        "note": "",
+        "evidence": {
+         "id": "psi_nonconstant",
+         "check": "numeric_sample",
+         "status": "pass",
+         "n_valid": 20000,
+         "value": 14.18415526117352
+        }
+       },
+       {
+        "id": "p_nonconstant",
+        "hard": true,
+        "check": "numeric_sample",
+        "status": "unmet",
+        "note": "",
+        "evidence": {
+         "id": "p_nonconstant",
+         "check": "numeric_sample",
+         "status": "fail",
+         "n_valid": 20000,
+         "value": 0.0
+        }
+       },
+       {
+        "id": "nonaxisym",
+        "hard": true,
+        "check": "numeric_sample",
+        "status": "met",
+        "note": "",
+        "evidence": {
+         "id": "nonaxisym",
+         "check": "numeric_sample",
+         "status": "pass",
+         "n_valid": 20000,
+         "value": 1200.6516451919647
+        }
+       },
+       {
+        "id": "iota_nonzero",
+        "hard": true,
+        "check": "sandbox_experiment",
+        "status": "unverified",
+        "note": "field-line trace, |iota| > 1e-3",
+        "evidence": null
+       },
+       {
+        "id": "iota_noninteger",
+        "hard": false,
+        "check": "sandbox_experiment",
+        "status": "unverified",
+        "note": "field-line trace, iota not within 1e-3 of an integer",
+        "evidence": null
+       },
+       {
+        "id": "novel",
+        "hard": false,
+        "check": "manual",
+        "status": "unverified",
+        "note": "human literature check",
+        "evidence": null
+       }
+      ],
+      "unmet_hard": [
+       "flux_surface",
+       "force_balance",
+       "p_nonconstant"
+      ],
+      "unverified_hard": [
+       "iota_nonzero"
+      ],
+      "_model": "none",
+      "_provider": "none",
+      "_input_tokens": 0,
+      "_output_tokens": 0
+     }
+    }
+   ]
+  },
+  {
+   "round": 2,
+   "verdict": "NOT_FOUND",
+   "best_candidate": "A",
+   "cost_usd": 0.052933293359999994,
+   "artifacts": [
+    {
+     "transform_name": "Planner",
+     "data": {
+      "_input_tokens": 1841,
+      "_model": "deepseek/deepseek-v4.1-flash",
+      "_output_tokens": 401,
+      "_provider": "openrouter",
+      "tool_calls": []
+     }
+    },
+    {
+     "transform_name": "Derive_A",
+     "data": {
+      "_input_tokens": 1914,
+      "_model": "deepseek/deepseek-v4-pro",
+      "_output_tokens": 10800,
+      "_provider": "openrouter",
+      "tool_calls": []
+     }
+    },
+    {
+     "transform_name": "Generator_A",
+     "data": {
+      "_input_tokens": 13837,
+      "_model": "deepseek/deepseek-v4.1-flash",
+      "_output_tokens": 287,
+      "_provider": "openrouter",
+      "response": "{\n  \"defs\": {\n    \"R\": \"sqrt(x**2 + y**2)\",\n    \"psi\": \"(R - 1)**2 + z**2 + 0.2*x*z + 0.02\",\n    \"B_R\": \"(2*z + 0.2*x)/R\",\n    \"B_z\": \"-2 + 2/R - 0.2*x*z/R**2\"\n  },\n  \"objects\": {\n    \"B\": [\n      \"B_R * x / R\",\n      \"B_R * y / R\",\n      \"B_z\"\n    ],\n    \"psi\": \"psi\",\n    \"p\": \"0.0 + 0.1*psi\"\n  },\n  \"params\": {\n    \"epsilon\": 0.2\n  },\n  \"derivation_notes\": \"Transcribed from the derivation with R0=1, F=0, psi shifted by +0.02 to make it nonnegative on the sample box (epsilon=0.2). div_free and flux_surface hold identically; p is nonconstant and psi is nonconstant. As the derivation states, force_balance is expected to fail (no correction to B_z or p' was actually imposed), iota_nonzero fails because B_phi=0, and B has 1/R singularities on the axis which the sample box includes.\"\n}",
+      "tool_calls": []
+     }
+    },
+    {
+     "transform_name": "Derive_B",
+     "data": {
+      "_input_tokens": 1904,
+      "_model": "deepseek/deepseek-v4-pro",
+      "_output_tokens": 10009,
+      "_provider": "openrouter",
+      "tool_calls": []
+     }
+    },
+    {
+     "transform_name": "Generator_B",
+     "data": {
+      "_input_tokens": 11741,
+      "_model": "deepseek/deepseek-v4.1-flash",
+      "_output_tokens": 399,
+      "_provider": "openrouter",
+      "response": "{\n  \"defs\": {\n    \"R\": \"sqrt(x**2 + y**2)\",\n    \"phi\": \"atan2(y, x)\",\n    \"cos2phi\": \"(x**2 - y**2)/R**2\",\n    \"sin2phi\": \"2*x*y/R**2\",\n    \"k\": \"1 + epsilon*cos2phi\",\n    \"kprime\": \"-2*epsilon*sin2phi\",\n    \"u\": \"R - 1.0\",\n    \"Term1\": \"-4*epsilon*z**2*kprime/(0.4**2*k**3) - 2*z/(0.4**2*k**2)\",\n    \"psi\": \"(u**2 + (z/k)**2)/0.4**2\"\n  },\n  \"objects\": {\n    \"B\": [\n      \"Term1*x/R**2 + 4*epsilon*u*y/(0.4**2*R)\",\n      \"Term1*y/R**2 - 4*epsilon*u*x/(0.4**2*R)\",\n      \"2*u/(0.4**2*R)\"\n    ],\n    \"psi\": \"(u**2 + (z/k)**2)/0.4**2\",\n    \"p\": \"psi**2\"\n  },\n  \"params\": {\n    \"epsilon\": 0.2\n  },\n  \"derivation_notes\": \"Construction uses B = curl(psi grad(zeta)) with zeta = phi + 2*epsilon*z, guaranteeing divergence_zero and flux_surface exactly. psi is nonnegative by construction. p = psi^2 is nonconstant. The field is nonaxisymmetric because k depends on phi. force_balance is expected to fail: p was chosen arbitrarily and the field is not a solution of the full MHD equilibrium. iota_nonzero is likely met due to the toroidal component, but not verified.\"\n}",
+      "tool_calls": []
+     }
+    },
+    {
+     "transform_name": "checks_a",
+     "data": {
+      "results": [
+       {
+        "id": "div_free",
+        "check": "divergence_zero",
+        "status": "pass",
+        "n_valid": 20000,
+        "max_residual": 4.547473508864641e-13
+       },
+       {
+        "id": "flux_surface",
+        "check": "identity_zero",
+        "status": "pass",
+        "n_valid": 20000,
+        "max_residual": 1.4210854715202004e-14
+       },
+       {
+        "id": "force_balance",
+        "check": "identity_zero",
+        "status": "fail",
+        "n_valid": 20000,
+        "max_residual": 585363.0942908821
+       },
+       {
+        "id": "psi_nonneg",
+        "check": "numeric_sample",
+        "status": "pass",
+        "n_valid": 20000,
+        "value": 0.010230913546705411
+       },
+       {
+        "id": "psi_nonconstant",
+        "check": "numeric_sample",
+        "status": "pass",
+        "n_valid": 20000,
+        "value": 1.5368942548025322
+       },
+       {
+        "id": "p_nonconstant",
+        "check": "numeric_sample",
+        "status": "pass",
+        "n_valid": 20000,
+        "value": 0.15368942548025322
+       },
+       {
+        "id": "nonaxisym",
+        "check": "numeric_sample",
+        "status": "pass",
+        "n_valid": 20000,
+        "value": 2.492726755657884
+       }
+      ],
+      "n_draws": 20000,
+      "seed": 2,
+      "_model": "none",
+      "_provider": "none",
+      "_input_tokens": 0,
+      "_output_tokens": 0
+     }
+    },
+    {
+     "transform_name": "iota_a",
+     "data": {
+      "results": [],
+      "skipped": "gate failed"
+     }
+    },
+    {
+     "transform_name": "criteria_a",
+     "data": {
+      "verdict": "NOT_FOUND",
+      "checklist": [
+       {
+        "id": "div_free",
+        "hard": true,
+        "check": "divergence_zero",
+        "status": "met",
+        "note": "",
+        "evidence": {
+         "id": "div_free",
+         "check": "divergence_zero",
+         "status": "pass",
+         "n_valid": 20000,
+         "max_residual": 4.547473508864641e-13
+        }
+       },
+       {
+        "id": "flux_surface",
+        "hard": true,
+        "check": "identity_zero",
+        "status": "met",
+        "note": "",
+        "evidence": {
+         "id": "flux_surface",
+         "check": "identity_zero",
+         "status": "pass",
+         "n_valid": 20000,
+         "max_residual": 1.4210854715202004e-14
+        }
+       },
+       {
+        "id": "force_balance",
+        "hard": true,
+        "check": "identity_zero",
+        "status": "unmet",
+        "note": "",
+        "evidence": {
+         "id": "force_balance",
+         "check": "identity_zero",
+         "status": "fail",
+         "n_valid": 20000,
+         "max_residual": 585363.0942908821
+        }
+       },
+       {
+        "id": "psi_nonneg",
+        "hard": true,
+        "check": "numeric_sample",
+        "status": "met",
+        "note": "",
+        "evidence": {
+         "id": "psi_nonneg",
+         "check": "numeric_sample",
+         "status": "pass",
+         "n_valid": 20000,
+         "value": 0.010230913546705411
+        }
+       },
+       {
+        "id": "psi_nonconstant",
+        "hard": true,
+        "check": "numeric_sample",
+        "status": "met",
+        "note": "",
+        "evidence": {
+         "id": "psi_nonconstant",
+         "check": "numeric_sample",
+         "status": "pass",
+         "n_valid": 20000,
+         "value": 1.5368942548025322
+        }
+       },
+       {
+        "id": "p_nonconstant",
+        "hard": true,
+        "check": "numeric_sample",
+        "status": "met",
+        "note": "",
+        "evidence": {
+         "id": "p_nonconstant",
+         "check": "numeric_sample",
+         "status": "pass",
+         "n_valid": 20000,
+         "value": 0.15368942548025322
+        }
+       },
+       {
+        "id": "nonaxisym",
+        "hard": true,
+        "check": "numeric_sample",
+        "status": "met",
+        "note": "",
+        "evidence": {
+         "id": "nonaxisym",
+         "check": "numeric_sample",
+         "status": "pass",
+         "n_valid": 20000,
+         "value": 2.492726755657884
+        }
+       },
+       {
+        "id": "iota_nonzero",
+        "hard": true,
+        "check": "sandbox_experiment",
+        "status": "unverified",
+        "note": "field-line trace, |iota| > 1e-3",
+        "evidence": null
+       },
+       {
+        "id": "iota_noninteger",
+        "hard": false,
+        "check": "sandbox_experiment",
+        "status": "unverified",
+        "note": "field-line trace, iota not within 1e-3 of an integer",
+        "evidence": null
+       },
+       {
+        "id": "novel",
+        "hard": false,
+        "check": "manual",
+        "status": "unverified",
+        "note": "human literature check",
+        "evidence": null
+       }
+      ],
+      "unmet_hard": [
+       "force_balance"
+      ],
+      "unverified_hard": [
+       "iota_nonzero"
+      ],
+      "_model": "none",
+      "_provider": "none",
+      "_input_tokens": 0,
+      "_output_tokens": 0
+     }
+    },
+    {
+     "transform_name": "checks_b",
+     "data": {
+      "results": [
+       {
+        "id": "div_free",
+        "check": "divergence_zero",
+        "status": "pass",
+        "n_valid": 20000,
+        "max_residual": 3.637978807091713e-12
+       },
+       {
+        "id": "flux_surface",
+        "check": "identity_zero",
+        "status": "pass",
+        "n_valid": 20000,
+        "max_residual": 9.094947017729282e-13
+       },
+       {
+        "id": "force_balance",
+        "check": "identity_zero",
+        "status": "fail",
+        "n_valid": 20000,
+        "max_residual": 24324334.635770306
+       },
+       {
+        "id": "psi_nonneg",
+        "check": "numeric_sample",
+        "status": "pass",
+        "n_valid": 20000,
+        "value": 9.800059405205142e-05
+       },
+       {
+        "id": "psi_nonconstant",
+        "check": "numeric_sample",
+        "status": "pass",
+        "n_valid": 20000,
+        "value": 8.705321305001473
+       },
+       {
+        "id": "p_nonconstant",
+        "check": "numeric_sample",
+        "status": "pass",
+        "n_valid": 20000,
+        "value": 75.78432527663117
+       },
+       {
+        "id": "nonaxisym",
+        "check": "numeric_sample",
+        "status": "pass",
+        "n_valid": 20000,
+        "value": 155.5296039320677
+       }
+      ],
+      "n_draws": 20000,
+      "seed": 2,
+      "_model": "none",
+      "_provider": "none",
+      "_input_tokens": 0,
+      "_output_tokens": 0
+     }
+    },
+    {
+     "transform_name": "iota_b",
+     "data": {
+      "results": [],
+      "skipped": "gate failed"
+     }
+    },
+    {
+     "transform_name": "criteria_b",
+     "data": {
+      "verdict": "NOT_FOUND",
+      "checklist": [
+       {
+        "id": "div_free",
+        "hard": true,
+        "check": "divergence_zero",
+        "status": "met",
+        "note": "",
+        "evidence": {
+         "id": "div_free",
+         "check": "divergence_zero",
+         "status": "pass",
+         "n_valid": 20000,
+         "max_residual": 3.637978807091713e-12
+        }
+       },
+       {
+        "id": "flux_surface",
+        "hard": true,
+        "check": "identity_zero",
+        "status": "met",
+        "note": "",
+        "evidence": {
+         "id": "flux_surface",
+         "check": "identity_zero",
+         "status": "pass",
+         "n_valid": 20000,
+         "max_residual": 9.094947017729282e-13
+        }
+       },
+       {
+        "id": "force_balance",
+        "hard": true,
+        "check": "identity_zero",
+        "status": "unmet",
+        "note": "",
+        "evidence": {
+         "id": "force_balance",
+         "check": "identity_zero",
+         "status": "fail",
+         "n_valid": 20000,
+         "max_residual": 24324334.635770306
+        }
+       },
+       {
+        "id": "psi_nonneg",
+        "hard": true,
+        "check": "numeric_sample",
+        "status": "met",
+        "note": "",
+        "evidence": {
+         "id": "psi_nonneg",
+         "check": "numeric_sample",
+         "status": "pass",
+         "n_valid": 20000,
+         "value": 9.800059405205142e-05
+        }
+       },
+       {
+        "id": "psi_nonconstant",
+        "hard": true,
+        "check": "numeric_sample",
+        "status": "met",
+        "note": "",
+        "evidence": {
+         "id": "psi_nonconstant",
+         "check": "numeric_sample",
+         "status": "pass",
+         "n_valid": 20000,
+         "value": 8.705321305001473
+        }
+       },
+       {
+        "id": "p_nonconstant",
+        "hard": true,
+        "check": "numeric_sample",
+        "status": "met",
+        "note": "",
+        "evidence": {
+         "id": "p_nonconstant",
+         "check": "numeric_sample",
+         "status": "pass",
+         "n_valid": 20000,
+         "value": 75.78432527663117
+        }
+       },
+       {
+        "id": "nonaxisym",
+        "hard": true,
+        "check": "numeric_sample",
+        "status": "met",
+        "note": "",
+        "evidence": {
+         "id": "nonaxisym",
+         "check": "numeric_sample",
+         "status": "pass",
+         "n_valid": 20000,
+         "value": 155.5296039320677
+        }
+       },
+       {
+        "id": "iota_nonzero",
+        "hard": true,
+        "check": "sandbox_experiment",
+        "status": "unverified",
+        "note": "field-line trace, |iota| > 1e-3",
+        "evidence": null
+       },
+       {
+        "id": "iota_noninteger",
+        "hard": false,
+        "check": "sandbox_experiment",
+        "status": "unverified",
+        "note": "field-line trace, iota not within 1e-3 of an integer",
+        "evidence": null
+       },
+       {
+        "id": "novel",
+        "hard": false,
+        "check": "manual",
+        "status": "unverified",
+        "note": "human literature check",
+        "evidence": null
+       }
+      ],
+      "unmet_hard": [
+       "force_balance"
+      ],
+      "unverified_hard": [
+       "iota_nonzero"
+      ],
+      "_model": "none",
+      "_provider": "none",
+      "_input_tokens": 0,
+      "_output_tokens": 0
+     }
+    }
+   ]
+  },
+  {
+   "round": 3,
+   "verdict": "NOT_FOUND",
+   "best_candidate": "B",
+   "cost_usd": 0.038049199680000007,
+   "artifacts": [
+    {
+     "transform_name": "Planner",
+     "data": {
+      "_input_tokens": 2601,
+      "_model": "deepseek/deepseek-v4.1-flash",
+      "_output_tokens": 596,
+      "_provider": "openrouter",
+      "tool_calls": []
+     }
+    },
+    {
+     "transform_name": "Derive_B",
+     "data": {
+      "_input_tokens": 1867,
+      "_model": "deepseek/deepseek-v4-pro",
+      "_output_tokens": 4558,
+      "_provider": "openrouter",
+      "tool_calls": []
+     }
+    },
+    {
+     "transform_name": "Generator_B",
+     "data": {
+      "_input_tokens": 6217,
+      "_model": "deepseek/deepseek-v4.1-flash",
+      "_output_tokens": 373,
+      "_provider": "openrouter",
+      "response": "{\n  \"defs\": {\n    \"R\": \"sqrt(x**2 + y**2)\",\n    \"psi0\": \"(R - 1)**2 + z**2 - 0.25 + 0.1*(x**2 - y**2)\",\n    \"psi\": \"psi0 + 0.16\",\n    \"f\": \"1.1 - 0.5*psi\",\n    \"B0x\": \"3*(R - 1)*y/R - 0.3*y - 2*x*z/R**2\",\n    \"B0y\": \"-2*y*z/R**2 - 3*(R - 1)*x/R - 0.3*x\",\n    \"B0z\": \"2*(R - 1)/R + 0.2*(x**2 - y**2)/R**2\"\n  },\n  \"objects\": {\n    \"B\": [\n      \"f*B0x\",\n      \"f*B0y\",\n      \"f*B0z\"\n    ],\n    \"psi\": \"psi\",\n    \"p\": \"-2.59*psi\"\n  },\n  \"params\": {},\n  \"derivation_notes\": \"Transcribed the derivation faithfully: psi is the shifted flux function psi0+0.16, B=(1.1-0.5 psi) B0 with B0=curl(psi0 grad(zeta)) written in Cartesian components, p=-2.59 psi. The derivation itself states force balance is only approximate (residual O(delta)), so the candidate is kept with that known weakness; div B=0 and B.grad psi=0 hold identically by construction. No free parameters from the task's degrees_of_freedom are used; all constants are numeric literals.\"\n}",
+      "tool_calls": []
+     }
+    },
+    {
+     "transform_name": "Derive_A",
+     "data": {
+      "_input_tokens": 1853,
+      "_model": "deepseek/deepseek-v4-pro",
+      "_output_tokens": 9466,
+      "_provider": "openrouter",
+      "tool_calls": []
+     }
+    },
+    {
+     "transform_name": "Generator_A",
+     "data": {
+      "_input_tokens": 11333,
+      "_model": "deepseek/deepseek-v4.1-flash",
+      "_output_tokens": 412,
+      "_provider": "openrouter",
+      "response": "{\"defs\": {\"R2\": \"x**2 + y**2\", \"psi\": \"0.6103515625*(x**2 + y**2 - 1)**2 + 0.09765625*(x**2 + y**2)*z**2\"}, \"objects\": {\"B\": [\"-0.1953125*x*z - y/(x**2 + y**2)\", \"-0.1953125*y*z + x/(x**2 + y**2)\", \"1.220703125*(x**2 + y**2 - 1) + 0.1953125*z**2\"], \"psi\": \"0.6103515625*(x**2 + y**2 - 1)**2 + 0.09765625*(x**2 + y**2)*z**2\", \"p\": \"2.63671875*psi\"}, \"params\": {\"epsilon\": 0.2}, \"derivation_notes\": \"Transcribed the derivation's final ansatz with R0=1, a=0.8, F=F0=1.0, F1=0, and p = A*psi with A = 2*eps^2/0.4096 + 4/1.6384 = 2.63671875 at eps=0.2. psi is a sum of positive squares vanishing on the circle R=1,z=0; B is divergence-free by construction via B=(F/R)e_phi + (1/R) grad(psi) x e_phi. The derivation states exact force balance is impossible for this ansatz (the phi-component vanishes identically, but the R and z components cannot both give a function of psi alone), so only approximate balance holds; the residual is (curl B)xB - grad p = (-2*A*psi_R, 0, 0), small but nonzero, and the derivation expects the force_balance criterion to fail exactly.\"}",
+      "tool_calls": []
+     }
+    },
+    {
+     "transform_name": "checks_a",
+     "data": {
+      "results": [
+       {
+        "id": "div_free",
+        "check": "divergence_zero",
+        "status": "pass",
+        "n_valid": 20000,
+        "max_residual": 0.0
+       },
+       {
+        "id": "flux_surface",
+        "check": "identity_zero",
+        "status": "fail",
+        "n_valid": 20000,
+        "max_residual": 1.6699280152843308
+       },
+       {
+        "id": "force_balance",
+        "check": "identity_zero",
+        "status": "fail",
+        "n_valid": 20000,
+        "max_residual": 49.84067900533621
+       },
+       {
+        "id": "psi_nonneg",
+        "check": "numeric_sample",
+        "status": "pass",
+        "n_valid": 20000,
+        "value": 4.869372768497526e-06
+       },
+       {
+        "id": "psi_nonconstant",
+        "check": "numeric_sample",
+        "status": "pass",
+        "n_valid": 20000,
+        "value": 7.288844841300853
+       },
+       {
+        "id": "p_nonconstant",
+        "check": "numeric_sample",
+        "status": "pass",
+        "n_valid": 20000,
+        "value": 19.21863385889877
+       },
+       {
+        "id": "nonaxisym",
+        "check": "numeric_sample",
+        "status": "fail",
+        "n_valid": 20000,
+        "value": 1.4210854715202004e-14
+       }
+      ],
+      "n_draws": 20000,
+      "seed": 3,
+      "_model": "none",
+      "_provider": "none",
+      "_input_tokens": 0,
+      "_output_tokens": 0
+     }
+    },
+    {
+     "transform_name": "iota_a",
+     "data": {
+      "results": [],
+      "skipped": "gate failed"
+     }
+    },
+    {
+     "transform_name": "criteria_a",
+     "data": {
+      "verdict": "NOT_FOUND",
+      "checklist": [
+       {
+        "id": "div_free",
+        "hard": true,
+        "check": "divergence_zero",
+        "status": "met",
+        "note": "",
+        "evidence": {
+         "id": "div_free",
+         "check": "divergence_zero",
+         "status": "pass",
+         "n_valid": 20000,
+         "max_residual": 0.0
+        }
+       },
+       {
+        "id": "flux_surface",
+        "hard": true,
+        "check": "identity_zero",
+        "status": "unmet",
+        "note": "",
+        "evidence": {
+         "id": "flux_surface",
+         "check": "identity_zero",
+         "status": "fail",
+         "n_valid": 20000,
+         "max_residual": 1.6699280152843308
+        }
+       },
+       {
+        "id": "force_balance",
+        "hard": true,
+        "check": "identity_zero",
+        "status": "unmet",
+        "note": "",
+        "evidence": {
+         "id": "force_balance",
+         "check": "identity_zero",
+         "status": "fail",
+         "n_valid": 20000,
+         "max_residual": 49.84067900533621
+        }
+       },
+       {
+        "id": "psi_nonneg",
+        "hard": true,
+        "check": "numeric_sample",
+        "status": "met",
+        "note": "",
+        "evidence": {
+         "id": "psi_nonneg",
+         "check": "numeric_sample",
+         "status": "pass",
+         "n_valid": 20000,
+         "value": 4.869372768497526e-06
+        }
+       },
+       {
+        "id": "psi_nonconstant",
+        "hard": true,
+        "check": "numeric_sample",
+        "status": "met",
+        "note": "",
+        "evidence": {
+         "id": "psi_nonconstant",
+         "check": "numeric_sample",
+         "status": "pass",
+         "n_valid": 20000,
+         "value": 7.288844841300853
+        }
+       },
+       {
+        "id": "p_nonconstant",
+        "hard": true,
+        "check": "numeric_sample",
+        "status": "met",
+        "note": "",
+        "evidence": {
+         "id": "p_nonconstant",
+         "check": "numeric_sample",
+         "status": "pass",
+         "n_valid": 20000,
+         "value": 19.21863385889877
+        }
+       },
+       {
+        "id": "nonaxisym",
+        "hard": true,
+        "check": "numeric_sample",
+        "status": "unmet",
+        "note": "",
+        "evidence": {
+         "id": "nonaxisym",
+         "check": "numeric_sample",
+         "status": "fail",
+         "n_valid": 20000,
+         "value": 1.4210854715202004e-14
+        }
+       },
+       {
+        "id": "iota_nonzero",
+        "hard": true,
+        "check": "sandbox_experiment",
+        "status": "unverified",
+        "note": "field-line trace, |iota| > 1e-3",
+        "evidence": null
+       },
+       {
+        "id": "iota_noninteger",
+        "hard": false,
+        "check": "sandbox_experiment",
+        "status": "unverified",
+        "note": "field-line trace, iota not within 1e-3 of an integer",
+        "evidence": null
+       },
+       {
+        "id": "novel",
+        "hard": false,
+        "check": "manual",
+        "status": "unverified",
+        "note": "human literature check",
+        "evidence": null
+       }
+      ],
+      "unmet_hard": [
+       "flux_surface",
+       "force_balance",
+       "nonaxisym"
+      ],
+      "unverified_hard": [
+       "iota_nonzero"
+      ],
+      "_model": "none",
+      "_provider": "none",
+      "_input_tokens": 0,
+      "_output_tokens": 0
+     }
+    },
+    {
+     "transform_name": "checks_b",
+     "data": {
+      "results": [
+       {
+        "id": "div_free",
+        "check": "divergence_zero",
+        "status": "pass",
+        "n_valid": 20000,
+        "max_residual": 1.1368683772161603e-13
+       },
+       {
+        "id": "flux_surface",
+        "check": "identity_zero",
+        "status": "pass",
+        "n_valid": 20000,
+        "max_residual": 7.105427357601002e-15
+       },
+       {
+        "id": "force_balance",
+        "check": "identity_zero",
+        "status": "fail",
+        "n_valid": 20000,
+        "max_residual": 74024.60796501889
+       },
+       {
+        "id": "psi_nonneg",
+        "check": "numeric_sample",
+        "status": "fail",
+        "n_valid": 20000,
+        "value": -0.20025325634555147
+       },
+       {
+        "id": "psi_nonconstant",
+        "check": "numeric_sample",
+        "status": "pass",
+        "n_valid": 20000,
+        "value": 1.5338340959628383
+       },
+       {
+        "id": "p_nonconstant",
+        "check": "numeric_sample",
+        "status": "pass",
+        "n_valid": 20000,
+        "value": 3.972630308543751
+       },
+       {
+        "id": "nonaxisym",
+        "check": "numeric_sample",
+        "status": "pass",
+        "n_valid": 20000,
+        "value": 0.616681646594791
+       }
+      ],
+      "n_draws": 20000,
+      "seed": 3,
+      "_model": "none",
+      "_provider": "none",
+      "_input_tokens": 0,
+      "_output_tokens": 0
+     }
+    },
+    {
+     "transform_name": "iota_b",
+     "data": {
+      "results": [],
+      "skipped": "gate failed"
+     }
+    },
+    {
+     "transform_name": "criteria_b",
+     "data": {
+      "verdict": "NOT_FOUND",
+      "checklist": [
+       {
+        "id": "div_free",
+        "hard": true,
+        "check": "divergence_zero",
+        "status": "met",
+        "note": "",
+        "evidence": {
+         "id": "div_free",
+         "check": "divergence_zero",
+         "status": "pass",
+         "n_valid": 20000,
+         "max_residual": 1.1368683772161603e-13
+        }
+       },
+       {
+        "id": "flux_surface",
+        "hard": true,
+        "check": "identity_zero",
+        "status": "met",
+        "note": "",
+        "evidence": {
+         "id": "flux_surface",
+         "check": "identity_zero",
+         "status": "pass",
+         "n_valid": 20000,
+         "max_residual": 7.105427357601002e-15
+        }
+       },
+       {
+        "id": "force_balance",
+        "hard": true,
+        "check": "identity_zero",
+        "status": "unmet",
+        "note": "",
+        "evidence": {
+         "id": "force_balance",
+         "check": "identity_zero",
+         "status": "fail",
+         "n_valid": 20000,
+         "max_residual": 74024.60796501889
+        }
+       },
+       {
+        "id": "psi_nonneg",
+        "hard": true,
+        "check": "numeric_sample",
+        "status": "unmet",
+        "note": "",
+        "evidence": {
+         "id": "psi_nonneg",
+         "check": "numeric_sample",
+         "status": "fail",
+         "n_valid": 20000,
+         "value": -0.20025325634555147
+        }
+       },
+       {
+        "id": "psi_nonconstant",
+        "hard": true,
+        "check": "numeric_sample",
+        "status": "met",
+        "note": "",
+        "evidence": {
+         "id": "psi_nonconstant",
+         "check": "numeric_sample",
+         "status": "pass",
+         "n_valid": 20000,
+         "value": 1.5338340959628383
+        }
+       },
+       {
+        "id": "p_nonconstant",
+        "hard": true,
+        "check": "numeric_sample",
+        "status": "met",
+        "note": "",
+        "evidence": {
+         "id": "p_nonconstant",
+         "check": "numeric_sample",
+         "status": "pass",
+         "n_valid": 20000,
+         "value": 3.972630308543751
+        }
+       },
+       {
+        "id": "nonaxisym",
+        "hard": true,
+        "check": "numeric_sample",
+        "status": "met",
+        "note": "",
+        "evidence": {
+         "id": "nonaxisym",
+         "check": "numeric_sample",
+         "status": "pass",
+         "n_valid": 20000,
+         "value": 0.616681646594791
+        }
+       },
+       {
+        "id": "iota_nonzero",
+        "hard": true,
+        "check": "sandbox_experiment",
+        "status": "unverified",
+        "note": "field-line trace, |iota| > 1e-3",
+        "evidence": null
+       },
+       {
+        "id": "iota_noninteger",
+        "hard": false,
+        "check": "sandbox_experiment",
+        "status": "unverified",
+        "note": "field-line trace, iota not within 1e-3 of an integer",
+        "evidence": null
+       },
+       {
+        "id": "novel",
+        "hard": false,
+        "check": "manual",
+        "status": "unverified",
+        "note": "human literature check",
+        "evidence": null
+       }
+      ],
+      "unmet_hard": [
+       "force_balance",
+       "psi_nonneg"
+      ],
+      "unverified_hard": [
+       "iota_nonzero"
+      ],
+      "_model": "none",
+      "_provider": "none",
+      "_input_tokens": 0,
+      "_output_tokens": 0
+     }
+    }
+   ]
+  },
+  {
+   "round": 4,
+   "verdict": "NOT_FOUND",
+   "best_candidate": "B",
+   "cost_usd": 0.07775838108,
+   "artifacts": [
+    {
+     "transform_name": "Planner",
+     "data": {
+      "_input_tokens": 2582,
+      "_model": "deepseek/deepseek-v4.1-flash",
+      "_output_tokens": 526,
+      "_provider": "openrouter",
+      "tool_calls": []
+     }
+    },
+    {
+     "transform_name": "Derive_A",
+     "data": {
+      "_input_tokens": 1835,
+      "_model": "deepseek/deepseek-v4-pro",
+      "_output_tokens": 16000,
+      "_provider": "openrouter",
+      "tool_calls": []
+     }
+    },
+    {
+     "transform_name": "Derive_B",
+     "data": {
+      "_input_tokens": 1823,
+      "_model": "deepseek/deepseek-v4-pro",
+      "_output_tokens": 16000,
+      "_provider": "openrouter",
+      "tool_calls": []
+     }
+    },
+    {
+     "transform_name": "Generator_A",
+     "data": {
+      "_input_tokens": 18077,
+      "_model": "deepseek/deepseek-v4.1-flash",
+      "_output_tokens": 360,
+      "_provider": "openrouter",
+      "response": "{\n  \"defs\": {\n    \"R\": \"sqrt(x**2 + y**2)\",\n    \"theta\": \"atan2(y, x)\",\n    \"u\": \"2*theta - z\",\n    \"psi\": \"(1 + 0.5*cos(u)) * ((R - 1)**2 + z**2)\"\n  },\n  \"objects\": {\n    \"B\": [\n      \"(1 + 0.5*cos(u)) * (y*(R - 1)/R + 2*z*y*(x**2 + y**2)**(-1/2)*0) \",\n      \"(1 + 0.5*cos(u)) * (-x*(R - 1)/R - 2*z*x*(x**2 + y**2)**(-1/2)*0)\",\n      \"0\"\n    ],\n    \"psi\": \"psi\",\n    \"p\": \"0.1*psi**2\"\n  },\n  \"params\": {\n    \"epsilon\": 0.5\n  },\n  \"derivation_notes\": \"Transcription of the derivation's final construction: psi = (1+eps*cos(2*theta-z))*((R-1)^2+z^2) is nonnegative, zero on the circle R=1,z=0, nonconstant and nonaxisymmetric. B = (1/R)*(grad psi x e_z) is divergence-free and satisfies B.grad(psi)=0 exactly. p = 0.1*psi^2 is nonconstant. Force balance is expected to fail (the derivation notes that with B_z=0 and psi_z nonzero, a nonconstant p cannot balance the z-component); the candidate is kept as written per the derivation.\"\n}",
+      "tool_calls": []
+     }
+    },
+    {
+     "transform_name": "Generator_B",
+     "data": {
+      "_input_tokens": 17575,
+      "_model": "deepseek/deepseek-v4.1-flash",
+      "_output_tokens": 495,
+      "_provider": "openrouter",
+      "response": "{\n  \"defs\": {\n    \"R\": \"sqrt(x**2 + y**2)\",\n    \"cos_u\": \"(x*cos(2*z) - y*sin(2*z))/R\",\n    \"sin_u\": \"(y*cos(2*z) + x*sin(2*z))/R\",\n    \"R0\": \"1 + 0.3*cos_u\",\n    \"L\": \"1 + 0.3*sin_u\",\n    \"psi\": \"(R - R0)**2 + (z/L)**2\",\n    \"psi_R\": \"2*(R - R0)\",\n    \"psi_phi\": \"2*0.3*(R - R0)*sin_u - 2*0.3*z**2*cos_u/L**3\",\n    \"psi_z\": \"4*0.3*(R - R0)*sin_u + 2*z*(L - 2*0.3*z*cos_u)/L**3\",\n    \"B_R\": \"(2*psi_phi - psi_z)/R\",\n    \"B_phi\": \"-2*psi_R\",\n    \"B_z\": \"psi_R/R\"\n  },\n  \"objects\": {\n    \"B\": [\n      \"B_R*x/R - B_phi*y/R\",\n      \"B_R*y/R + B_phi*x/R\",\n      \"B_z\"\n    ],\n    \"psi\": \"psi\",\n    \"p\": \"-0.02*psi\"\n  },\n  \"params\": {\n    \"epsilon\": 0.3\n  },\n  \"derivation_notes\": \"Follows the Hamiltonian ansatz B = grad(psi) x grad(alpha) with alpha = phi + 2z (delta set to 0 since it cancels in B). The derivative parameter delta is redundant. The field is divergence-free and tangent to psi surfaces by construction. A toroidal component B_phi = -2 psi_R is now present, so iota is expected to be nonzero (unlike the previous candidate). Force balance is not satisfied exactly; the pressure p = -0.02 psi is a numerical best-fit with a small coefficient chosen to reduce the residual, but the perpendicular component of curl(B) x B is not eliminated because psi does not solve the Grad-Shafranov equation. Hence force_balance remains unmet, as noted in the derivation.\"\n}",
+      "tool_calls": []
+     }
+    },
+    {
+     "transform_name": "checks_a",
+     "data": {
+      "results": [
+       {
+        "id": "div_free",
+        "check": "divergence_zero",
+        "status": "fail",
+        "n_valid": 20000,
+        "max_residual": 310.9520643796827
+       },
+       {
+        "id": "flux_surface",
+        "check": "identity_zero",
+        "status": "fail",
+        "n_valid": 20000,
+        "max_residual": 297.60873146731984
+       },
+       {
+        "id": "force_balance",
+        "check": "identity_zero",
+        "status": "fail",
+        "n_valid": 20000,
+        "max_residual": 189.4592570317703
+       },
+       {
+        "id": "psi_nonneg",
+        "check": "numeric_sample",
+        "status": "pass",
+        "n_valid": 20000,
+        "value": 1.7926785266675643e-05
+       },
+       {
+        "id": "psi_nonconstant",
+        "check": "numeric_sample",
+        "status": "pass",
+        "n_valid": 20000,
+        "value": 1.7608461973797491
+       },
+       {
+        "id": "p_nonconstant",
+        "check": "numeric_sample",
+        "status": "pass",
+        "n_valid": 20000,
+        "value": 0.3100642463450059
+       },
+       {
+        "id": "nonaxisym",
+        "check": "numeric_sample",
+        "status": "pass",
+        "n_valid": 20000,
+        "value": 0.6805807665844785
+       }
+      ],
+      "n_draws": 20000,
+      "seed": 4,
+      "_model": "none",
+      "_provider": "none",
+      "_input_tokens": 0,
+      "_output_tokens": 0
+     }
+    },
+    {
+     "transform_name": "iota_a",
+     "data": {
+      "results": [],
+      "skipped": "gate failed"
+     }
+    },
+    {
+     "transform_name": "criteria_a",
+     "data": {
+      "verdict": "NOT_FOUND",
+      "checklist": [
+       {
+        "id": "div_free",
+        "hard": true,
+        "check": "divergence_zero",
+        "status": "unmet",
+        "note": "",
+        "evidence": {
+         "id": "div_free",
+         "check": "divergence_zero",
+         "status": "fail",
+         "n_valid": 20000,
+         "max_residual": 310.9520643796827
+        }
+       },
+       {
+        "id": "flux_surface",
+        "hard": true,
+        "check": "identity_zero",
+        "status": "unmet",
+        "note": "",
+        "evidence": {
+         "id": "flux_surface",
+         "check": "identity_zero",
+         "status": "fail",
+         "n_valid": 20000,
+         "max_residual": 297.60873146731984
+        }
+       },
+       {
+        "id": "force_balance",
+        "hard": true,
+        "check": "identity_zero",
+        "status": "unmet",
+        "note": "",
+        "evidence": {
+         "id": "force_balance",
+         "check": "identity_zero",
+         "status": "fail",
+         "n_valid": 20000,
+         "max_residual": 189.4592570317703
+        }
+       },
+       {
+        "id": "psi_nonneg",
+        "hard": true,
+        "check": "numeric_sample",
+        "status": "met",
+        "note": "",
+        "evidence": {
+         "id": "psi_nonneg",
+         "check": "numeric_sample",
+         "status": "pass",
+         "n_valid": 20000,
+         "value": 1.7926785266675643e-05
+        }
+       },
+       {
+        "id": "psi_nonconstant",
+        "hard": true,
+        "check": "numeric_sample",
+        "status": "met",
+        "note": "",
+        "evidence": {
+         "id": "psi_nonconstant",
+         "check": "numeric_sample",
+         "status": "pass",
+         "n_valid": 20000,
+         "value": 1.7608461973797491
+        }
+       },
+       {
+        "id": "p_nonconstant",
+        "hard": true,
+        "check": "numeric_sample",
+        "status": "met",
+        "note": "",
+        "evidence": {
+         "id": "p_nonconstant",
+         "check": "numeric_sample",
+         "status": "pass",
+         "n_valid": 20000,
+         "value": 0.3100642463450059
+        }
+       },
+       {
+        "id": "nonaxisym",
+        "hard": true,
+        "check": "numeric_sample",
+        "status": "met",
+        "note": "",
+        "evidence": {
+         "id": "nonaxisym",
+         "check": "numeric_sample",
+         "status": "pass",
+         "n_valid": 20000,
+         "value": 0.6805807665844785
+        }
+       },
+       {
+        "id": "iota_nonzero",
+        "hard": true,
+        "check": "sandbox_experiment",
+        "status": "unverified",
+        "note": "field-line trace, |iota| > 1e-3",
+        "evidence": null
+       },
+       {
+        "id": "iota_noninteger",
+        "hard": false,
+        "check": "sandbox_experiment",
+        "status": "unverified",
+        "note": "field-line trace, iota not within 1e-3 of an integer",
+        "evidence": null
+       },
+       {
+        "id": "novel",
+        "hard": false,
+        "check": "manual",
+        "status": "unverified",
+        "note": "human literature check",
+        "evidence": null
+       }
+      ],
+      "unmet_hard": [
+       "div_free",
+       "flux_surface",
+       "force_balance"
+      ],
+      "unverified_hard": [
+       "iota_nonzero"
+      ],
+      "_model": "none",
+      "_provider": "none",
+      "_input_tokens": 0,
+      "_output_tokens": 0
+     }
+    },
+    {
+     "transform_name": "checks_b",
+     "data": {
+      "results": [
+       {
+        "id": "div_free",
+        "check": "divergence_zero",
+        "status": "pass",
+        "n_valid": 20000,
+        "max_residual": 3.700506567838602e-11
+       },
+       {
+        "id": "flux_surface",
+        "check": "identity_zero",
+        "status": "pass",
+        "n_valid": 20000,
+        "max_residual": 3.637978807091713e-12
+       },
+       {
+        "id": "force_balance",
+        "check": "identity_zero",
+        "status": "fail",
+        "n_valid": 20000,
+        "max_residual": 204506912.84234467
+       },
+       {
+        "id": "psi_nonneg",
+        "check": "numeric_sample",
+        "status": "pass",
+        "n_valid": 20000,
+        "value": 2.3698440656254245e-05
+       },
+       {
+        "id": "psi_nonconstant",
+        "check": "numeric_sample",
+        "status": "pass",
+        "n_valid": 20000,
+        "value": 2.136093105404847
+       },
+       {
+        "id": "p_nonconstant",
+        "check": "numeric_sample",
+        "status": "pass",
+        "n_valid": 20000,
+        "value": 0.042721862108096934
+       },
+       {
+        "id": "nonaxisym",
+        "check": "numeric_sample",
+        "status": "pass",
+        "n_valid": 20000,
+        "value": 136.62714933232166
+       }
+      ],
+      "n_draws": 20000,
+      "seed": 4,
+      "_model": "none",
+      "_provider": "none",
+      "_input_tokens": 0,
+      "_output_tokens": 0
+     }
+    },
+    {
+     "transform_name": "iota_b",
+     "data": {
+      "results": [],
+      "skipped": "gate failed"
+     }
+    },
+    {
+     "transform_name": "criteria_b",
+     "data": {
+      "verdict": "NOT_FOUND",
+      "checklist": [
+       {
+        "id": "div_free",
+        "hard": true,
+        "check": "divergence_zero",
+        "status": "met",
+        "note": "",
+        "evidence": {
+         "id": "div_free",
+         "check": "divergence_zero",
+         "status": "pass",
+         "n_valid": 20000,
+         "max_residual": 3.700506567838602e-11
+        }
+       },
+       {
+        "id": "flux_surface",
+        "hard": true,
+        "check": "identity_zero",
+        "status": "met",
+        "note": "",
+        "evidence": {
+         "id": "flux_surface",
+         "check": "identity_zero",
+         "status": "pass",
+         "n_valid": 20000,
+         "max_residual": 3.637978807091713e-12
+        }
+       },
+       {
+        "id": "force_balance",
+        "hard": true,
+        "check": "identity_zero",
+        "status": "unmet",
+        "note": "",
+        "evidence": {
+         "id": "force_balance",
+         "check": "identity_zero",
+         "status": "fail",
+         "n_valid": 20000,
+         "max_residual": 204506912.84234467
+        }
+       },
+       {
+        "id": "psi_nonneg",
+        "hard": true,
+        "check": "numeric_sample",
+        "status": "met",
+        "note": "",
+        "evidence": {
+         "id": "psi_nonneg",
+         "check": "numeric_sample",
+         "status": "pass",
+         "n_valid": 20000,
+         "value": 2.3698440656254245e-05
+        }
+       },
+       {
+        "id": "psi_nonconstant",
+        "hard": true,
+        "check": "numeric_sample",
+        "status": "met",
+        "note": "",
+        "evidence": {
+         "id": "psi_nonconstant",
+         "check": "numeric_sample",
+         "status": "pass",
+         "n_valid": 20000,
+         "value": 2.136093105404847
+        }
+       },
+       {
+        "id": "p_nonconstant",
+        "hard": true,
+        "check": "numeric_sample",
+        "status": "met",
+        "note": "",
+        "evidence": {
+         "id": "p_nonconstant",
+         "check": "numeric_sample",
+         "status": "pass",
+         "n_valid": 20000,
+         "value": 0.042721862108096934
+        }
+       },
+       {
+        "id": "nonaxisym",
+        "hard": true,
+        "check": "numeric_sample",
+        "status": "met",
+        "note": "",
+        "evidence": {
+         "id": "nonaxisym",
+         "check": "numeric_sample",
+         "status": "pass",
+         "n_valid": 20000,
+         "value": 136.62714933232166
+        }
+       },
+       {
+        "id": "iota_nonzero",
+        "hard": true,
+        "check": "sandbox_experiment",
+        "status": "unverified",
+        "note": "field-line trace, |iota| > 1e-3",
+        "evidence": null
+       },
+       {
+        "id": "iota_noninteger",
+        "hard": false,
+        "check": "sandbox_experiment",
+        "status": "unverified",
+        "note": "field-line trace, iota not within 1e-3 of an integer",
+        "evidence": null
+       },
+       {
+        "id": "novel",
+        "hard": false,
+        "check": "manual",
+        "status": "unverified",
+        "note": "human literature check",
+        "evidence": null
+       }
+      ],
+      "unmet_hard": [
+       "force_balance"
+      ],
+      "unverified_hard": [
+       "iota_nonzero"
+      ],
+      "_model": "none",
+      "_provider": "none",
+      "_input_tokens": 0,
+      "_output_tokens": 0
+     }
+    }
+   ]
+  },
+  {
+   "round": 5,
+   "verdict": "PARTIAL",
+   "best_candidate": "A",
+   "cost_usd": 0.048147376799999995,
+   "artifacts": [
+    {
+     "transform_name": "Planner",
+     "data": {
+      "_input_tokens": 2666,
+      "_model": "deepseek/deepseek-v4.1-flash",
+      "_output_tokens": 578,
+      "_provider": "openrouter",
+      "tool_calls": []
+     }
+    },
+    {
+     "transform_name": "Derive_B",
+     "data": {
+      "_input_tokens": 1988,
+      "_model": "deepseek/deepseek-v4-pro",
+      "_output_tokens": 7950,
+      "_provider": "openrouter",
+      "tool_calls": []
+     }
+    },
+    {
+     "transform_name": "Generator_B",
+     "data": {
+      "_input_tokens": 9768,
+      "_model": "deepseek/deepseek-v4.1-flash",
+      "_output_tokens": 590,
+      "_provider": "openrouter",
+      "response": "{\n  \"defs\": {\n    \"R\": \"sqrt(x**2 + y**2)\",\n    \"psi_raw\": \"(R - 1)**2 + z**2 + 0.1*((x**2 - y**2)/R*cos(z) + 2*x*y/R*sin(z))\",\n    \"psi_core\": \"psi_raw + 0.1\",\n    \"psi_x\": \"2*(R - 1)*x/R + 0.1*((2*x/R - (x**2 - y**2)*x/R**3)*cos(z) + (2*y/R - 2*x*y*x/R**3)*sin(z))\",\n    \"psi_y\": \"2*(R - 1)*y/R + 0.1*((-2*y/R - (x**2 - y**2)*y/R**3)*cos(z) + (2*x/R - 2*x*y*y/R**3)*sin(z))\",\n    \"psi_z\": \"2*z + 0.1*(-(x**2 - y**2)/R*sin(z) + 2*x*y/R*cos(z))\"\n  },\n  \"objects\": {\n    \"B\": [\n      \"2.0*psi_y - (x/R**2)*psi_z\",\n      \"-(y/R**2)*psi_z - 2.0*psi_x\",\n      \"(x*psi_x + y*psi_y)/R**2\"\n    ],\n    \"psi\": \"psi_core\",\n    \"p\": \"0.05 - 0.02*psi\"\n  },\n  \"params\": {\n    \"epsilon\": 0.1\n  },\n  \"derivation_notes\": \"Uses the assignment's non-axisymmetric psi (helical term eps*R*cos(2*phi - z), rewritten in Cartesian) with a +eps offset so psi >= 0. B is taken in Clebsch form grad(psi) x grad(alpha) with alpha = phi + 2z (kappa=2.0), which makes div(B)=0 and B.grad(psi)=0 identically; eps=0.1 lies in [0.05,0.9]. p = 0.05 - 0.02*psi. Note: the assignment's F(psi)-based toroidal field is NOT used because it would break div_free/flux_surface for non-axisymmetric psi; the derivation explicitly chooses the Clebsch form to keep those hard criteria. As the derivation states, force_balance is EXPECTED TO FAIL: the field does not solve curl(B) x B = grad(p) exactly, residual kept moderate by small |p1|. iota_nonzero expected but unverified by hand; iota_noninteger unverified.\"\n}",
+      "tool_calls": []
+     }
+    },
+    {
+     "transform_name": "Derive_A",
+     "data": {
+      "_input_tokens": 2090,
+      "_model": "deepseek/deepseek-v4-pro",
+      "_output_tokens": 10351,
+      "_provider": "openrouter",
+      "tool_calls": []
+     }
+    },
+    {
+     "transform_name": "Generator_A",
+     "data": {
+      "_input_tokens": 12652,
+      "_model": "deepseek/deepseek-v4.1-flash",
+      "_output_tokens": 300,
+      "_provider": "openrouter",
+      "response": "{\n  \"defs\": {\n    \"R\": \"sqrt(x**2 + y**2)\"\n  },\n  \"objects\": {\n    \"B\": [\n      \"-x*z - y/(x**2 + y**2)\",\n      \"-y*z + x/(x**2 + y**2)\",\n      \"x**2 + y**2 + z**2 - 1\"\n    ],\n    \"psi\": \"0.25*(x**2 + y**2)**2 + 0.5*(x**2 + y**2)*z**2 - 0.5*(x**2 + y**2) + 0.25\",\n    \"p\": \"-3*psi + 0.75\"\n  },\n  \"params\": {\n    \"epsilon\": 0.05\n  },\n  \"derivation_notes\": \"Transcript of an exact AXISYMMETRIC Solov'ev-type tokamak equilibrium (F0=1, p=-3 psi+0.75) that satisfies divergence-free, B.grad(psi)=0, and (curl B) x B = grad p exactly. The free parameter epsilon is unused (set to its lower bound 0.05). The derivation explicitly states that non-axisymmetry was sacrificed to fix force balance, so the nonaxisym hard criterion is expected to FAIL; iota is expected nonzero due to the toroidal field. No novelty is claimed.\"\n}",
+      "tool_calls": []
+     }
+    },
+    {
+     "transform_name": "checks_a",
+     "data": {
+      "results": [
+       {
+        "id": "div_free",
+        "check": "divergence_zero",
+        "status": "pass",
+        "n_valid": 20000,
+        "max_residual": 0.0
+       },
+       {
+        "id": "flux_surface",
+        "check": "identity_zero",
+        "status": "pass",
+        "n_valid": 20000,
+        "max_residual": 2.6645352591003757e-15
+       },
+       {
+        "id": "force_balance",
+        "check": "identity_zero",
+        "status": "pass",
+        "n_valid": 20000,
+        "max_residual": 4.0537205536761434e-11
+       },
+       {
+        "id": "psi_nonneg",
+        "check": "numeric_sample",
+        "status": "pass",
+        "n_valid": 20000,
+        "value": 8.591847025507526e-07
+       },
+       {
+        "id": "psi_nonconstant",
+        "check": "numeric_sample",
+        "status": "pass",
+        "n_valid": 20000,
+        "value": 3.3209760941385533
+       },
+       {
+        "id": "p_nonconstant",
+        "check": "numeric_sample",
+        "status": "pass",
+        "n_valid": 20000,
+        "value": 9.962928282415662
+       },
+       {
+        "id": "nonaxisym",
+        "check": "numeric_sample",
+        "status": "fail",
+        "n_valid": 20000,
+        "value": 1.4210854715202004e-14
+       }
+      ],
+      "n_draws": 20000,
+      "seed": 5,
+      "_model": "none",
+      "_provider": "none",
+      "_input_tokens": 0,
+      "_output_tokens": 0
+     }
+    },
+    {
+     "transform_name": "iota_a",
+     "data": {
+      "results": [
+       {
+        "id": "iota_nonzero",
+        "check": "sandbox_experiment",
+        "status": "pass",
+        "iota": 1.3729472294050984,
+        "iota_seeds": [
+         1.385815014233785,
+         1.360079444576412
+        ],
+        "iota_spread": 0.025735569657373114,
+        "psi_drift": 1.7050472145285767e-11
+       },
+       {
+        "id": "iota_noninteger",
+        "check": "sandbox_experiment",
+        "status": "pass",
+        "iota": 1.3729472294050984,
+        "iota_seeds": [
+         1.385815014233785,
+         1.360079444576412
+        ],
+        "iota_spread": 0.025735569657373114,
+        "psi_drift": 1.7050472145285767e-11
+       }
+      ],
+      "dof_values": {
+       "epsilon": 0.05
+      },
+      "_model": "none",
+      "_provider": "none",
+      "_input_tokens": 0,
+      "_output_tokens": 0
+     }
+    },
+    {
+     "transform_name": "criteria_a",
+     "data": {
+      "verdict": "PARTIAL",
+      "checklist": [
+       {
+        "id": "div_free",
+        "hard": true,
+        "check": "divergence_zero",
+        "status": "met",
+        "note": "",
+        "evidence": {
+         "id": "div_free",
+         "check": "divergence_zero",
+         "status": "pass",
+         "n_valid": 20000,
+         "max_residual": 0.0
+        }
+       },
+       {
+        "id": "flux_surface",
+        "hard": true,
+        "check": "identity_zero",
+        "status": "met",
+        "note": "",
+        "evidence": {
+         "id": "flux_surface",
+         "check": "identity_zero",
+         "status": "pass",
+         "n_valid": 20000,
+         "max_residual": 2.6645352591003757e-15
+        }
+       },
+       {
+        "id": "force_balance",
+        "hard": true,
+        "check": "identity_zero",
+        "status": "met",
+        "note": "",
+        "evidence": {
+         "id": "force_balance",
+         "check": "identity_zero",
+         "status": "pass",
+         "n_valid": 20000,
+         "max_residual": 4.0537205536761434e-11
+        }
+       },
+       {
+        "id": "psi_nonneg",
+        "hard": true,
+        "check": "numeric_sample",
+        "status": "met",
+        "note": "",
+        "evidence": {
+         "id": "psi_nonneg",
+         "check": "numeric_sample",
+         "status": "pass",
+         "n_valid": 20000,
+         "value": 8.591847025507526e-07
+        }
+       },
+       {
+        "id": "psi_nonconstant",
+        "hard": true,
+        "check": "numeric_sample",
+        "status": "met",
+        "note": "",
+        "evidence": {
+         "id": "psi_nonconstant",
+         "check": "numeric_sample",
+         "status": "pass",
+         "n_valid": 20000,
+         "value": 3.3209760941385533
+        }
+       },
+       {
+        "id": "p_nonconstant",
+        "hard": true,
+        "check": "numeric_sample",
+        "status": "met",
+        "note": "",
+        "evidence": {
+         "id": "p_nonconstant",
+         "check": "numeric_sample",
+         "status": "pass",
+         "n_valid": 20000,
+         "value": 9.962928282415662
+        }
+       },
+       {
+        "id": "nonaxisym",
+        "hard": true,
+        "check": "numeric_sample",
+        "status": "unmet",
+        "note": "",
+        "evidence": {
+         "id": "nonaxisym",
+         "check": "numeric_sample",
+         "status": "fail",
+         "n_valid": 20000,
+         "value": 1.4210854715202004e-14
+        }
+       },
+       {
+        "id": "iota_nonzero",
+        "hard": true,
+        "check": "sandbox_experiment",
+        "status": "met",
+        "note": "field-line trace, |iota| > 1e-3",
+        "evidence": {
+         "id": "iota_nonzero",
+         "check": "sandbox_experiment",
+         "status": "pass",
+         "iota": 1.3729472294050984,
+         "iota_seeds": [
+          1.385815014233785,
+          1.360079444576412
+         ],
+         "iota_spread": 0.025735569657373114,
+         "psi_drift": 1.7050472145285767e-11
+        }
+       },
+       {
+        "id": "iota_noninteger",
+        "hard": false,
+        "check": "sandbox_experiment",
+        "status": "met",
+        "note": "field-line trace, iota not within 1e-3 of an integer",
+        "evidence": {
+         "id": "iota_noninteger",
+         "check": "sandbox_experiment",
+         "status": "pass",
+         "iota": 1.3729472294050984,
+         "iota_seeds": [
+          1.385815014233785,
+          1.360079444576412
+         ],
+         "iota_spread": 0.025735569657373114,
+         "psi_drift": 1.7050472145285767e-11
+        }
+       },
+       {
+        "id": "novel",
+        "hard": false,
+        "check": "manual",
+        "status": "unverified",
+        "note": "human literature check",
+        "evidence": null
+       }
+      ],
+      "unmet_hard": [
+       "nonaxisym"
+      ],
+      "unverified_hard": [],
+      "_model": "none",
+      "_provider": "none",
+      "_input_tokens": 0,
+      "_output_tokens": 0
+     }
+    },
+    {
+     "transform_name": "checks_b",
+     "data": {
+      "results": [
+       {
+        "id": "div_free",
+        "check": "divergence_zero",
+        "status": "pass",
+        "n_valid": 20000,
+        "max_residual": 5.799805080641818e-13
+       },
+       {
+        "id": "flux_surface",
+        "check": "identity_zero",
+        "status": "pass",
+        "n_valid": 20000,
+        "max_residual": 2.1316282072803006e-14
+       },
+       {
+        "id": "force_balance",
+        "check": "identity_zero",
+        "status": "fail",
+        "n_valid": 20000,
+        "max_residual": 545596.9304292887
+       },
+       {
+        "id": "psi_nonneg",
+        "check": "numeric_sample",
+        "status": "fail",
+        "n_valid": 20000,
+        "value": -0.0013412433843829341
+       },
+       {
+        "id": "psi_nonconstant",
+        "check": "numeric_sample",
+        "status": "pass",
+        "n_valid": 20000,
+        "value": 1.619122361948515
+       },
+       {
+        "id": "p_nonconstant",
+        "check": "numeric_sample",
+        "status": "pass",
+        "n_valid": 20000,
+        "value": 0.032382447238970304
+       },
+       {
+        "id": "nonaxisym",
+        "check": "numeric_sample",
+        "status": "pass",
+        "n_valid": 20000,
+        "value": 6.408589890058224
+       }
+      ],
+      "n_draws": 20000,
+      "seed": 5,
+      "_model": "none",
+      "_provider": "none",
+      "_input_tokens": 0,
+      "_output_tokens": 0
+     }
+    },
+    {
+     "transform_name": "iota_b",
+     "data": {
+      "results": [],
+      "skipped": "gate failed"
+     }
+    },
+    {
+     "transform_name": "criteria_b",
+     "data": {
+      "verdict": "NOT_FOUND",
+      "checklist": [
+       {
+        "id": "div_free",
+        "hard": true,
+        "check": "divergence_zero",
+        "status": "met",
+        "note": "",
+        "evidence": {
+         "id": "div_free",
+         "check": "divergence_zero",
+         "status": "pass",
+         "n_valid": 20000,
+         "max_residual": 5.799805080641818e-13
+        }
+       },
+       {
+        "id": "flux_surface",
+        "hard": true,
+        "check": "identity_zero",
+        "status": "met",
+        "note": "",
+        "evidence": {
+         "id": "flux_surface",
+         "check": "identity_zero",
+         "status": "pass",
+         "n_valid": 20000,
+         "max_residual": 2.1316282072803006e-14
+        }
+       },
+       {
+        "id": "force_balance",
+        "hard": true,
+        "check": "identity_zero",
+        "status": "unmet",
+        "note": "",
+        "evidence": {
+         "id": "force_balance",
+         "check": "identity_zero",
+         "status": "fail",
+         "n_valid": 20000,
+         "max_residual": 545596.9304292887
+        }
+       },
+       {
+        "id": "psi_nonneg",
+        "hard": true,
+        "check": "numeric_sample",
+        "status": "unmet",
+        "note": "",
+        "evidence": {
+         "id": "psi_nonneg",
+         "check": "numeric_sample",
+         "status": "fail",
+         "n_valid": 20000,
+         "value": -0.0013412433843829341
+        }
+       },
+       {
+        "id": "psi_nonconstant",
+        "hard": true,
+        "check": "numeric_sample",
+        "status": "met",
+        "note": "",
+        "evidence": {
+         "id": "psi_nonconstant",
+         "check": "numeric_sample",
+         "status": "pass",
+         "n_valid": 20000,
+         "value": 1.619122361948515
+        }
+       },
+       {
+        "id": "p_nonconstant",
+        "hard": true,
+        "check": "numeric_sample",
+        "status": "met",
+        "note": "",
+        "evidence": {
+         "id": "p_nonconstant",
+         "check": "numeric_sample",
+         "status": "pass",
+         "n_valid": 20000,
+         "value": 0.032382447238970304
+        }
+       },
+       {
+        "id": "nonaxisym",
+        "hard": true,
+        "check": "numeric_sample",
+        "status": "met",
+        "note": "",
+        "evidence": {
+         "id": "nonaxisym",
+         "check": "numeric_sample",
+         "status": "pass",
+         "n_valid": 20000,
+         "value": 6.408589890058224
+        }
+       },
+       {
+        "id": "iota_nonzero",
+        "hard": true,
+        "check": "sandbox_experiment",
+        "status": "unverified",
+        "note": "field-line trace, |iota| > 1e-3",
+        "evidence": null
+       },
+       {
+        "id": "iota_noninteger",
+        "hard": false,
+        "check": "sandbox_experiment",
+        "status": "unverified",
+        "note": "field-line trace, iota not within 1e-3 of an integer",
+        "evidence": null
+       },
+       {
+        "id": "novel",
+        "hard": false,
+        "check": "manual",
+        "status": "unverified",
+        "note": "human literature check",
+        "evidence": null
+       }
+      ],
+      "unmet_hard": [
+       "force_balance",
+       "psi_nonneg"
+      ],
+      "unverified_hard": [
+       "iota_nonzero"
+      ],
+      "_model": "none",
+      "_provider": "none",
+      "_input_tokens": 0,
+      "_output_tokens": 0
+     }
+    }
+   ]
+  }
+ ],
+ "cost_usd": 0.29958521988000003,
+ "unpriced_models": [],
+ "token_usage": {
+  "deepseek/deepseek-v4.1-flash": {
+   "input_tokens": 153454,
+   "output_tokens": 10656
+  },
+  "deepseek/deepseek-v4-pro": {
+   "input_tokens": 17770,
+   "output_tokens": 117134
+  }
+ },
+ "elapsed_seconds": 1207.64,
+ "artifacts": [
+  {
+   "transform_name": "Planner",
+   "data": {
+    "_input_tokens": 2666,
+    "_model": "deepseek/deepseek-v4.1-flash",
+    "_output_tokens": 578,
+    "_provider": "openrouter",
+    "tool_calls": []
+   }
+  },
+  {
+   "transform_name": "Derive_B",
+   "data": {
+    "_input_tokens": 1988,
+    "_model": "deepseek/deepseek-v4-pro",
+    "_output_tokens": 7950,
+    "_provider": "openrouter",
+    "tool_calls": []
+   }
+  },
+  {
+   "transform_name": "Generator_B",
+   "data": {
+    "_input_tokens": 9768,
+    "_model": "deepseek/deepseek-v4.1-flash",
+    "_output_tokens": 590,
+    "_provider": "openrouter",
+    "response": "{\n  \"defs\": {\n    \"R\": \"sqrt(x**2 + y**2)\",\n    \"psi_raw\": \"(R - 1)**2 + z**2 + 0.1*((x**2 - y**2)/R*cos(z) + 2*x*y/R*sin(z))\",\n    \"psi_core\": \"psi_raw + 0.1\",\n    \"psi_x\": \"2*(R - 1)*x/R + 0.1*((2*x/R - (x**2 - y**2)*x/R**3)*cos(z) + (2*y/R - 2*x*y*x/R**3)*sin(z))\",\n    \"psi_y\": \"2*(R - 1)*y/R + 0.1*((-2*y/R - (x**2 - y**2)*y/R**3)*cos(z) + (2*x/R - 2*x*y*y/R**3)*sin(z))\",\n    \"psi_z\": \"2*z + 0.1*(-(x**2 - y**2)/R*sin(z) + 2*x*y/R*cos(z))\"\n  },\n  \"objects\": {\n    \"B\": [\n      \"2.0*psi_y - (x/R**2)*psi_z\",\n      \"-(y/R**2)*psi_z - 2.0*psi_x\",\n      \"(x*psi_x + y*psi_y)/R**2\"\n    ],\n    \"psi\": \"psi_core\",\n    \"p\": \"0.05 - 0.02*psi\"\n  },\n  \"params\": {\n    \"epsilon\": 0.1\n  },\n  \"derivation_notes\": \"Uses the assignment's non-axisymmetric psi (helical term eps*R*cos(2*phi - z), rewritten in Cartesian) with a +eps offset so psi >= 0. B is taken in Clebsch form grad(psi) x grad(alpha) with alpha = phi + 2z (kappa=2.0), which makes div(B)=0 and B.grad(psi)=0 identically; eps=0.1 lies in [0.05,0.9]. p = 0.05 - 0.02*psi. Note: the assignment's F(psi)-based toroidal field is NOT used because it would break div_free/flux_surface for non-axisymmetric psi; the derivation explicitly chooses the Clebsch form to keep those hard criteria. As the derivation states, force_balance is EXPECTED TO FAIL: the field does not solve curl(B) x B = grad(p) exactly, residual kept moderate by small |p1|. iota_nonzero expected but unverified by hand; iota_noninteger unverified.\"\n}",
+    "tool_calls": []
+   }
+  },
+  {
+   "transform_name": "Derive_A",
+   "data": {
+    "_input_tokens": 2090,
+    "_model": "deepseek/deepseek-v4-pro",
+    "_output_tokens": 10351,
+    "_provider": "openrouter",
+    "tool_calls": []
+   }
+  },
+  {
+   "transform_name": "Generator_A",
+   "data": {
+    "_input_tokens": 12652,
+    "_model": "deepseek/deepseek-v4.1-flash",
+    "_output_tokens": 300,
+    "_provider": "openrouter",
+    "response": "{\n  \"defs\": {\n    \"R\": \"sqrt(x**2 + y**2)\"\n  },\n  \"objects\": {\n    \"B\": [\n      \"-x*z - y/(x**2 + y**2)\",\n      \"-y*z + x/(x**2 + y**2)\",\n      \"x**2 + y**2 + z**2 - 1\"\n    ],\n    \"psi\": \"0.25*(x**2 + y**2)**2 + 0.5*(x**2 + y**2)*z**2 - 0.5*(x**2 + y**2) + 0.25\",\n    \"p\": \"-3*psi + 0.75\"\n  },\n  \"params\": {\n    \"epsilon\": 0.05\n  },\n  \"derivation_notes\": \"Transcript of an exact AXISYMMETRIC Solov'ev-type tokamak equilibrium (F0=1, p=-3 psi+0.75) that satisfies divergence-free, B.grad(psi)=0, and (curl B) x B = grad p exactly. The free parameter epsilon is unused (set to its lower bound 0.05). The derivation explicitly states that non-axisymmetry was sacrificed to fix force balance, so the nonaxisym hard criterion is expected to FAIL; iota is expected nonzero due to the toroidal field. No novelty is claimed.\"\n}",
+    "tool_calls": []
+   }
+  },
+  {
+   "transform_name": "checks_a",
+   "data": {
+    "results": [
+     {
+      "id": "div_free",
+      "check": "divergence_zero",
+      "status": "pass",
+      "n_valid": 20000,
+      "max_residual": 0.0
+     },
+     {
+      "id": "flux_surface",
+      "check": "identity_zero",
+      "status": "pass",
+      "n_valid": 20000,
+      "max_residual": 2.6645352591003757e-15
+     },
+     {
+      "id": "force_balance",
+      "check": "identity_zero",
+      "status": "pass",
+      "n_valid": 20000,
+      "max_residual": 4.0537205536761434e-11
+     },
+     {
+      "id": "psi_nonneg",
+      "check": "numeric_sample",
+      "status": "pass",
+      "n_valid": 20000,
+      "value": 8.591847025507526e-07
+     },
+     {
+      "id": "psi_nonconstant",
+      "check": "numeric_sample",
+      "status": "pass",
+      "n_valid": 20000,
+      "value": 3.3209760941385533
+     },
+     {
+      "id": "p_nonconstant",
+      "check": "numeric_sample",
+      "status": "pass",
+      "n_valid": 20000,
+      "value": 9.962928282415662
+     },
+     {
+      "id": "nonaxisym",
+      "check": "numeric_sample",
+      "status": "fail",
+      "n_valid": 20000,
+      "value": 1.4210854715202004e-14
+     }
+    ],
+    "n_draws": 20000,
+    "seed": 5,
+    "_model": "none",
+    "_provider": "none",
+    "_input_tokens": 0,
+    "_output_tokens": 0
+   }
+  },
+  {
+   "transform_name": "iota_a",
+   "data": {
+    "results": [
+     {
+      "id": "iota_nonzero",
+      "check": "sandbox_experiment",
+      "status": "pass",
+      "iota": 1.3729472294050984,
+      "iota_seeds": [
+       1.385815014233785,
+       1.360079444576412
+      ],
+      "iota_spread": 0.025735569657373114,
+      "psi_drift": 1.7050472145285767e-11
+     },
+     {
+      "id": "iota_noninteger",
+      "check": "sandbox_experiment",
+      "status": "pass",
+      "iota": 1.3729472294050984,
+      "iota_seeds": [
+       1.385815014233785,
+       1.360079444576412
+      ],
+      "iota_spread": 0.025735569657373114,
+      "psi_drift": 1.7050472145285767e-11
+     }
+    ],
+    "dof_values": {
+     "epsilon": 0.05
+    },
+    "_model": "none",
+    "_provider": "none",
+    "_input_tokens": 0,
+    "_output_tokens": 0
+   }
+  },
+  {
+   "transform_name": "criteria_a",
+   "data": {
+    "verdict": "PARTIAL",
+    "checklist": [
+     {
+      "id": "div_free",
+      "hard": true,
+      "check": "divergence_zero",
+      "status": "met",
+      "note": "",
+      "evidence": {
+       "id": "div_free",
+       "check": "divergence_zero",
+       "status": "pass",
+       "n_valid": 20000,
+       "max_residual": 0.0
+      }
+     },
+     {
+      "id": "flux_surface",
+      "hard": true,
+      "check": "identity_zero",
+      "status": "met",
+      "note": "",
+      "evidence": {
+       "id": "flux_surface",
+       "check": "identity_zero",
+       "status": "pass",
+       "n_valid": 20000,
+       "max_residual": 2.6645352591003757e-15
+      }
+     },
+     {
+      "id": "force_balance",
+      "hard": true,
+      "check": "identity_zero",
+      "status": "met",
+      "note": "",
+      "evidence": {
+       "id": "force_balance",
+       "check": "identity_zero",
+       "status": "pass",
+       "n_valid": 20000,
+       "max_residual": 4.0537205536761434e-11
+      }
+     },
+     {
+      "id": "psi_nonneg",
+      "hard": true,
+      "check": "numeric_sample",
+      "status": "met",
+      "note": "",
+      "evidence": {
+       "id": "psi_nonneg",
+       "check": "numeric_sample",
+       "status": "pass",
+       "n_valid": 20000,
+       "value": 8.591847025507526e-07
+      }
+     },
+     {
+      "id": "psi_nonconstant",
+      "hard": true,
+      "check": "numeric_sample",
+      "status": "met",
+      "note": "",
+      "evidence": {
+       "id": "psi_nonconstant",
+       "check": "numeric_sample",
+       "status": "pass",
+       "n_valid": 20000,
+       "value": 3.3209760941385533
+      }
+     },
+     {
+      "id": "p_nonconstant",
+      "hard": true,
+      "check": "numeric_sample",
+      "status": "met",
+      "note": "",
+      "evidence": {
+       "id": "p_nonconstant",
+       "check": "numeric_sample",
+       "status": "pass",
+       "n_valid": 20000,
+       "value": 9.962928282415662
+      }
+     },
+     {
+      "id": "nonaxisym",
+      "hard": true,
+      "check": "numeric_sample",
+      "status": "unmet",
+      "note": "",
+      "evidence": {
+       "id": "nonaxisym",
+       "check": "numeric_sample",
+       "status": "fail",
+       "n_valid": 20000,
+       "value": 1.4210854715202004e-14
+      }
+     },
+     {
+      "id": "iota_nonzero",
+      "hard": true,
+      "check": "sandbox_experiment",
+      "status": "met",
+      "note": "field-line trace, |iota| > 1e-3",
+      "evidence": {
+       "id": "iota_nonzero",
+       "check": "sandbox_experiment",
+       "status": "pass",
+       "iota": 1.3729472294050984,
+       "iota_seeds": [
+        1.385815014233785,
+        1.360079444576412
+       ],
+       "iota_spread": 0.025735569657373114,
+       "psi_drift": 1.7050472145285767e-11
+      }
+     },
+     {
+      "id": "iota_noninteger",
+      "hard": false,
+      "check": "sandbox_experiment",
+      "status": "met",
+      "note": "field-line trace, iota not within 1e-3 of an integer",
+      "evidence": {
+       "id": "iota_noninteger",
+       "check": "sandbox_experiment",
+       "status": "pass",
+       "iota": 1.3729472294050984,
+       "iota_seeds": [
+        1.385815014233785,
+        1.360079444576412
+       ],
+       "iota_spread": 0.025735569657373114,
+       "psi_drift": 1.7050472145285767e-11
+      }
+     },
+     {
+      "id": "novel",
+      "hard": false,
+      "check": "manual",
+      "status": "unverified",
+      "note": "human literature check",
+      "evidence": null
+     }
+    ],
+    "unmet_hard": [
+     "nonaxisym"
+    ],
+    "unverified_hard": [],
+    "_model": "none",
+    "_provider": "none",
+    "_input_tokens": 0,
+    "_output_tokens": 0
+   }
+  },
+  {
+   "transform_name": "checks_b",
+   "data": {
+    "results": [
+     {
+      "id": "div_free",
+      "check": "divergence_zero",
+      "status": "pass",
+      "n_valid": 20000,
+      "max_residual": 5.799805080641818e-13
+     },
+     {
+      "id": "flux_surface",
+      "check": "identity_zero",
+      "status": "pass",
+      "n_valid": 20000,
+      "max_residual": 2.1316282072803006e-14
+     },
+     {
+      "id": "force_balance",
+      "check": "identity_zero",
+      "status": "fail",
+      "n_valid": 20000,
+      "max_residual": 545596.9304292887
+     },
+     {
+      "id": "psi_nonneg",
+      "check": "numeric_sample",
+      "status": "fail",
+      "n_valid": 20000,
+      "value": -0.0013412433843829341
+     },
+     {
+      "id": "psi_nonconstant",
+      "check": "numeric_sample",
+      "status": "pass",
+      "n_valid": 20000,
+      "value": 1.619122361948515
+     },
+     {
+      "id": "p_nonconstant",
+      "check": "numeric_sample",
+      "status": "pass",
+      "n_valid": 20000,
+      "value": 0.032382447238970304
+     },
+     {
+      "id": "nonaxisym",
+      "check": "numeric_sample",
+      "status": "pass",
+      "n_valid": 20000,
+      "value": 6.408589890058224
+     }
+    ],
+    "n_draws": 20000,
+    "seed": 5,
+    "_model": "none",
+    "_provider": "none",
+    "_input_tokens": 0,
+    "_output_tokens": 0
+   }
+  },
+  {
+   "transform_name": "iota_b",
+   "data": {
+    "results": [],
+    "skipped": "gate failed"
+   }
+  },
+  {
+   "transform_name": "criteria_b",
+   "data": {
+    "verdict": "NOT_FOUND",
+    "checklist": [
+     {
+      "id": "div_free",
+      "hard": true,
+      "check": "divergence_zero",
+      "status": "met",
+      "note": "",
+      "evidence": {
+       "id": "div_free",
+       "check": "divergence_zero",
+       "status": "pass",
+       "n_valid": 20000,
+       "max_residual": 5.799805080641818e-13
+      }
+     },
+     {
+      "id": "flux_surface",
+      "hard": true,
+      "check": "identity_zero",
+      "status": "met",
+      "note": "",
+      "evidence": {
+       "id": "flux_surface",
+       "check": "identity_zero",
+       "status": "pass",
+       "n_valid": 20000,
+       "max_residual": 2.1316282072803006e-14
+      }
+     },
+     {
+      "id": "force_balance",
+      "hard": true,
+      "check": "identity_zero",
+      "status": "unmet",
+      "note": "",
+      "evidence": {
+       "id": "force_balance",
+       "check": "identity_zero",
+       "status": "fail",
+       "n_valid": 20000,
+       "max_residual": 545596.9304292887
+      }
+     },
+     {
+      "id": "psi_nonneg",
+      "hard": true,
+      "check": "numeric_sample",
+      "status": "unmet",
+      "note": "",
+      "evidence": {
+       "id": "psi_nonneg",
+       "check": "numeric_sample",
+       "status": "fail",
+       "n_valid": 20000,
+       "value": -0.0013412433843829341
+      }
+     },
+     {
+      "id": "psi_nonconstant",
+      "hard": true,
+      "check": "numeric_sample",
+      "status": "met",
+      "note": "",
+      "evidence": {
+       "id": "psi_nonconstant",
+       "check": "numeric_sample",
+       "status": "pass",
+       "n_valid": 20000,
+       "value": 1.619122361948515
+      }
+     },
+     {
+      "id": "p_nonconstant",
+      "hard": true,
+      "check": "numeric_sample",
+      "status": "met",
+      "note": "",
+      "evidence": {
+       "id": "p_nonconstant",
+       "check": "numeric_sample",
+       "status": "pass",
+       "n_valid": 20000,
+       "value": 0.032382447238970304
+      }
+     },
+     {
+      "id": "nonaxisym",
+      "hard": true,
+      "check": "numeric_sample",
+      "status": "met",
+      "note": "",
+      "evidence": {
+       "id": "nonaxisym",
+       "check": "numeric_sample",
+       "status": "pass",
+       "n_valid": 20000,
+       "value": 6.408589890058224
+      }
+     },
+     {
+      "id": "iota_nonzero",
+      "hard": true,
+      "check": "sandbox_experiment",
+      "status": "unverified",
+      "note": "field-line trace, |iota| > 1e-3",
+      "evidence": null
+     },
+     {
+      "id": "iota_noninteger",
+      "hard": false,
+      "check": "sandbox_experiment",
+      "status": "unverified",
+      "note": "field-line trace, iota not within 1e-3 of an integer",
+      "evidence": null
+     },
+     {
+      "id": "novel",
+      "hard": false,
+      "check": "manual",
+      "status": "unverified",
+      "note": "human literature check",
+      "evidence": null
+     }
+    ],
+    "unmet_hard": [
+     "force_balance",
+     "psi_nonneg"
+    ],
+    "unverified_hard": [
+     "iota_nonzero"
+    ],
+    "_model": "none",
+    "_provider": "none",
+    "_input_tokens": 0,
+    "_output_tokens": 0
+   }
+  },
+  {
+   "transform_name": "construct_critic",
+   "data": {
+    "_input_tokens": 1929,
+    "_model": "deepseek/deepseek-v4.1-flash",
+    "_output_tokens": 2293,
+    "_provider": "openrouter",
+    "tool_calls": []
+   }
+  },
+  {
+   "transform_name": "devils_advocate",
+   "data": {
+    "_input_tokens": 1679,
+    "_model": "deepseek/deepseek-v4.1-flash",
+    "_output_tokens": 702,
+    "_provider": "openrouter",
+    "tool_calls": []
+   }
+  },
+  {
+   "transform_name": "synthesizer",
+   "data": {
+    "_input_tokens": 2691,
+    "_model": "deepseek/deepseek-v4.1-flash",
+    "_output_tokens": 922,
+    "_provider": "openrouter",
+    "tool_calls": []
+   }
+  }
+ ]
+}
