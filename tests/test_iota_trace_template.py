@@ -97,3 +97,23 @@ def test_axis_on_the_z_axis_is_not_a_toroidal_axis():
     out = run_script_locally(_script_for(cand, {"epsilon": 0.5}))
     assert set(out) == {"error"} and "z-axis" in out["error"]
 
+
+def test_valid_fields_have_zero_psi_on_the_axis_all_the_way_round():
+    """The closed-axis guard must not disturb the known-good fields (iota=2 and the sheared Solov'ev)."""
+    for name in ("iota2_candidate.json", "solovev_candidate.json"):
+        cand = json.loads((Path(__file__).parent / "fixtures" / name).read_text(encoding="utf-8"))
+        out = run_script_locally(_script_for(cand))
+        assert "error" not in out, (name, out)
+        assert out["axis_psi_max"] < 1e-6, name
+
+
+def test_axis_that_is_zero_psi_only_at_phi_zero_is_not_a_closed_axis():
+    """psi = 0 on the axis at phi = 0 but 0.1 at phi = pi: the tracer used to check only phi = 0."""
+    cand = {"objects": {
+        "B": ["-y", "x", "0"],
+        "psi": "(sqrt(x**2+y**2)-1)**2+z**2+0.05*(1-x/sqrt(x**2+y**2))",
+        "p": "1-psi",
+    }}
+    out = run_script_locally(_script_for(cand))
+    assert set(out) == {"error"} and "closed curve" in out["error"], out
+

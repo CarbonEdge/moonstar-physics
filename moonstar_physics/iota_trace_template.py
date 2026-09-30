@@ -93,6 +93,7 @@ def main():
     phis = np.linspace(0.0, 2 * np.pi, N_STEPS + 1)
     iotas = []
     drift = 0.0
+    axis_psi_max = psi_min
     for off in SEED_OFFSETS:
         u0 = [ax0[0] + off, ax0[1]]
         sol = solve_ivp(rhs, (0.0, 2 * np.pi), u0, t_eval=phis, rtol=1e-10, atol=1e-12)
@@ -103,16 +104,25 @@ def main():
         guess = ax0
         theta = []
         for ph, r, z in zip(sol.t, sol.y[0], sol.y[1]):
-            guess, _ = find_axis(ph, [guess])
+            guess, pmin = find_axis(ph, [guess])
+            if pmin > AXIS_PSI_TOL:
+                # the warm start can stall on a wiggling axis: retry globally before judging
+                g2, p2 = find_axis(ph, starts)
+                if p2 < pmin:
+                    guess, pmin = g2, p2
+            axis_psi_max = max(axis_psi_max, pmin)
             theta.append(np.arctan2(z - guess[1], r - guess[0]))
         theta = np.unwrap(theta)
         iotas.append(float((theta[-1] - theta[0]) / (2 * np.pi)))
+    if axis_psi_max > AXIS_PSI_TOL:
+        return {"error": "psi is not zero on the axis all the way round (max axis psi %.3g): the axis is not a closed curve" % axis_psi_max}
     if drift > PSI_DRIFT_TOL:
         return {"error": "field line does not stay on a psi surface (max psi drift %.3g)" % drift}
     # iota may legitimately differ between the seed surfaces (magnetic shear): report it.
     return {"iota": sum(iotas) / len(iotas), "iota_seeds": iotas,
             "iota_spread": max(iotas) - min(iotas),
-            "psi_drift": float(drift), "axis_psi_min": psi_min}
+            "psi_drift": float(drift), "axis_psi_min": psi_min,
+            "axis_psi_max": float(axis_psi_max)}
 
 
 if __name__ == "__main__":
