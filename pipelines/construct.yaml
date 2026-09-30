@@ -19,7 +19,7 @@ transforms:
       model: "{{MODEL_PLANNER}}"
       max_tokens: 4000
       timeout_seconds: 300
-      reasoning: {effort: low}
+      reasoning: {enabled: false}
       system: |
         You plan a construction task. You receive a task spec (statement,
         unknowns, hard/soft acceptance criteria, mechanism hints, free
@@ -54,7 +54,7 @@ transforms:
       model: "{{MODEL_GENERATOR}}"
       max_tokens: 16000
       timeout_seconds: 900
-      reasoning: {effort: low}
+      reasoning: {enabled: false}
       system: |
         You are the derivation stage of a construction pipeline. You receive
         {"task": <spec>, "assignment": {"mechanism": ..., "ansatz": ...}}.
@@ -104,7 +104,7 @@ transforms:
       model: "{{MODEL_CONSTRUCT_REVIEW}}"
       max_tokens: 6000
       timeout_seconds: 300
-      reasoning: {effort: low}
+      reasoning: {enabled: false}
       system: |
         You are the formalisation stage of a construction pipeline. You
         receive {"task": <spec>, "assignment": ..., "derivation": <a written

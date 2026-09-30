@@ -93,7 +93,7 @@ def test_formalise_step_is_cheap_and_low_reasoning():
     cfg = _spec().by_name()["Generator_A"].config
     models = json.loads(_MODELS.read_text(encoding="utf-8"))
     assert cfg["model"] == models["MODEL_CONSTRUCT_REVIEW"]
-    assert cfg["reasoning"] == {"effort": "low"}
+    assert cfg["reasoning"] == {"enabled": False}
     assert "derivation" in cfg["system"] and "Do NOT re-derive" in cfg["system"]
 
 
@@ -111,4 +111,14 @@ def test_planner_and_derive_prompts_describe_repair_rounds():
     assert "history" in planner and "repair" in planner.lower()
     derive = by_name["Derive_A"].config["system"]
     assert "feedback" in derive and "REPAIR" in derive and "previous_best" in derive
+
+
+def test_hidden_reasoning_is_off_where_the_visible_output_is_the_work():
+    """Live run 2026-09-30: with hidden reasoning on, Derive burned 16-24k tokens and returned no
+    content (`effort: low` barely changes DeepSeek's reasoning); the derivation is written out anyway.
+    Replaying the real repair-round request: reasoning on -> 16000 reasoning tokens, no content;
+    reasoning off -> 2893 tokens, 8766 chars of derivation."""
+    by_name = _spec().by_name()
+    for name in ("Planner", "Derive_A", "Derive_B", "Generator_A", "Generator_B"):
+        assert by_name[name].config["reasoning"] == {"enabled": False}, name
 
