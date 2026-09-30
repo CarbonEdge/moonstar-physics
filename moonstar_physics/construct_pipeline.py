@@ -1,15 +1,14 @@
-"""Single-round orchestrator for the `construct` pipeline (Phase 2).
+"""Multi-round orchestrator for the `construct` pipeline (Phase 3).
 
-Like local_pipeline.run_*, this walks a fixed DAG in Python: LLM nodes go to
-the moonstar-rs gateway (one single-node session each, via
-local_pipeline._submit_single_node); deterministic nodes run in-process.
-`pipelines/construct.yaml` supplies per-node config only — no control flow.
-
-Flow: Planner -> Derive_A/B -> Generator_A/B (formalise to JSON) -> (checks -> iota -> criteria) per candidate
--> if the best verdict is not NOT_FOUND: construct_critic ->
-devils_advocate -> synthesizer. The verdict is computed by code; the
-synthesizer's first line is overwritten to match. Multi-round feedback and
-max_usd enforcement are Phase 3.
+Each round: Planner -> per candidate (concurrently) Derive (long reasoning)
+-> Generator (formalise to strict JSON) -> deterministic checks -> iota trace
+-> criteria. Round n checks with seed n. After a round that is not
+CONSTRUCTED, the best candidate so far and its evidence are fed back (to the
+Planner as a stripped history, to Derive as `feedback`) for a minimal repair.
+Stop: CONSTRUCTED, max_rounds, max_usd (checked at round boundaries), or the
+wallclock budget. The LLM review (critic -> devil's advocate -> synthesizer)
+runs once, on the best candidate, if it is not NOT_FOUND. The verdict is
+computed by code; the synthesizer's first line is overwritten to match.
 """
 from __future__ import annotations
 
@@ -24,6 +23,7 @@ import httpx
 
 from ._compat import NonRetryableTransformError
 from ._pipeline_spec import PipelineSpec, TransformSpec, render_pipeline_yaml
+from .construct_cost import load_prices, run_cost_usd, usage_by_model
 from .construct_spec import GATE_CHECKS, ConstructSpec, load_construct_spec
 from .local_pipeline import (
     _CONSTRUCT_LOCAL_TRANSFORMS,
@@ -38,6 +38,8 @@ _LLM_MAX_POLLS = 600  # x _POLL_INTERVAL_SECONDS (2 s) = 20 min per LLM step
 # Live run 2026-09-29: OpenRouter intermittently returns an undecodable body on long calls
 # (gateway reports `failed`, no retry). One retry of a failed LLM step is cheap insurance.
 _LLM_ATTEMPTS = 2
+_HISTORY_ROUNDS = 2
+_DEFAULT_PRICES_PATH = Path(__file__).resolve().parent.parent / "pipelines" / "prices.json"
 
 
 def _task_payload(spec: ConstructSpec) -> dict[str, Any]:
@@ -110,7 +112,7 @@ def _not_found_row(error: str) -> dict[str, Any]:
 
 async def _evaluate_candidate(
     label: str, gen_name: str, nodes: dict[str, TransformSpec], spec_path: str,
-    artifacts: dict[str, dict[str, Any]],
+    artifacts: dict[str, dict[str, Any]], seed: int,
 ) -> None:
     """Runs checks -> iota -> criteria for one generator; a candidate the
     checkers cannot even read becomes NOT_FOUND instead of failing the run."""
@@ -118,7 +120,9 @@ async def _evaluate_candidate(
     gen_input = {gen_name: artifacts[gen_name]}
     try:
         checks = await _CONSTRUCT_LOCAL_TRANSFORMS["VectorCalculusCheckTransform"](
-            gen_input, {**nodes[f"checks_{lo}"].config, "spec_path": spec_path}, _DUMMY_CTX
+            gen_input,
+            {**nodes[f"checks_{lo}"].config, "spec_path": spec_path, "seed": seed},
+            _DUMMY_CTX,
         )
         artifacts[f"checks_{lo}"] = checks
         gate_ok = all(
@@ -139,58 +143,167 @@ async def _evaluate_candidate(
         artifacts[f"criteria_{lo}"] = _not_found_row(str(e))
 
 
-async def _run_round(
-    client: httpx.AsyncClient, gateway_url: str, token: str, spec: ConstructSpec, spec_path: str,
-    nodes: dict[str, TransformSpec], artifacts: dict[str, dict[str, Any]],
-) -> tuple[str, str]:
-    task = _task_payload(spec)
+def _packed(artifacts: dict[str, dict[str, Any]]) -> list[dict[str, Any]]:
+    return [{"transform_name": n, "data": d} for n, d in artifacts.items()]
 
+
+def _evidence(criteria: dict[str, Any]) -> dict[str, dict[str, Any]]:
+    out: dict[str, dict[str, Any]] = {}
+    for row in criteria.get("checklist", []):
+        ev = row.get("evidence") or {}
+        entry: dict[str, Any] = {"status": row.get("status"), "hard": row.get("hard")}
+        for key in ("max_residual", "value", "iota", "detail"):
+            if ev.get(key) is not None:
+                entry[key] = ev[key]
+        out[row["id"]] = entry
+    return out
+
+
+def _candidate_summary(label: str, artifacts: dict[str, dict[str, Any]]) -> dict[str, Any]:
+    crit = artifacts.get(f"criteria_{label.lower()}", {})
+    parsed = _loads_lenient(artifacts.get(f"Generator_{label}", {}).get("response"))
+    parsed = parsed if isinstance(parsed, dict) else {}
+    return {
+        "verdict": crit.get("verdict", "NOT_FOUND"),
+        "unmet_hard": list(crit.get("unmet_hard", [])),
+        "unverified_hard": list(crit.get("unverified_hard", [])),
+        "evidence": _evidence(crit),
+        "candidate": {k: parsed[k] for k in ("defs", "objects", "params") if k in parsed},
+        "derivation_notes": parsed.get("derivation_notes", ""),
+        "error": crit.get("error"),
+    }
+
+
+def _round_summary(
+    round_no: int, verdict: str, best: str, artifacts: dict[str, dict[str, Any]]
+) -> dict[str, Any]:
+    return {
+        "round": round_no, "verdict": verdict, "best_candidate": best,
+        "candidates": {l: _candidate_summary(l, artifacts) for l in ("A", "B")},
+    }
+
+
+def _round_score(h: dict[str, Any]) -> tuple[int, int, int]:
+    best = h["candidates"][h["best_candidate"]]
+    return (_RANK[h["verdict"]], -len(best["unmet_hard"]), h["round"])
+
+
+def _feedback(history: list[dict[str, Any]]) -> dict[str, Any] | None:
+    """The best candidate seen so far (by verdict, then fewest unmet hard
+    criteria, then latest) with its evidence, as the repair target."""
+    best: tuple[tuple[int, int, int], int, str, dict[str, Any]] | None = None
+    for h in history:
+        for label, c in h["candidates"].items():
+            if not c["candidate"]:
+                continue
+            score = (_RANK[c["verdict"]], -len(c["unmet_hard"]), h["round"])
+            if best is None or score > best[0]:
+                best = (score, h["round"], label, c)
+    if best is None:
+        return None
+    _, rnd, label, c = best
+    return {
+        "from_round": rnd, "from_candidate": label, "previous_best": c["candidate"],
+        "evidence": c["evidence"], "unmet_hard": c["unmet_hard"],
+        "unverified_hard": c["unverified_hard"], "derivation_notes": c["derivation_notes"],
+    }
+
+
+def _planner_view(history: list[dict[str, Any]]) -> list[dict[str, Any]]:
+    return [
+        {
+            "round": h["round"], "verdict": h["verdict"], "best_candidate": h["best_candidate"],
+            "candidates": {
+                l: {k: v for k, v in c.items() if k != "candidate"}
+                for l, c in h["candidates"].items()
+            },
+        }
+        for h in history[-_HISTORY_ROUNDS:]
+    ]
+
+
+def _make_llm(client, gateway_url, token, nodes, store):
     async def llm(name: str, payload: dict[str, Any]) -> dict[str, Any]:
         for attempt in range(_LLM_ATTEMPTS):
             try:
-                artifacts[name] = await _submit_single_node(
+                store[name] = await _submit_single_node(
                     client, gateway_url, token, nodes[name], payload, max_polls=_LLM_MAX_POLLS
                 )
-                return artifacts[name]
+                return store[name]
             except PipelineRunError:
                 if attempt == _LLM_ATTEMPTS - 1:
                     raise
         raise AssertionError("unreachable")
 
-    planner = await llm("Planner", {"task": task})
+    return llm
+
+
+async def _run_round(
+    client: httpx.AsyncClient, gateway_url: str, token: str, spec: ConstructSpec, spec_path: str,
+    nodes: dict[str, TransformSpec], artifacts: dict[str, dict[str, Any]],
+    round_no: int, history: list[dict[str, Any]],
+) -> tuple[str, str]:
+    task = _task_payload(spec)
+    feedback = _feedback(history)
+    llm = _make_llm(client, gateway_url, token, nodes, artifacts)
+
+    planner = await llm("Planner", {"task": task, "history": _planner_view(history)})
     assign_a, assign_b, fallback = _parse_assignments(planner, spec)
     if fallback:
         planner["planner_fallback"] = True
 
-    # Two calls per candidate keep each under the gateway's LLM timeout: a long
-    # reasoning "derive" step (free-form maths), then a cheap "formalise" step
-    # that turns the derivation into the strict JSON the checkers read.
-    # A candidate whose generation fails (e.g. the reasoning model burns its whole
-    # budget) is NOT_FOUND for that candidate only; the run fails only if BOTH do.
+    async def generate(label: str, assignment: dict[str, str]) -> None:
+        # Two calls per candidate keep each under the gateway's LLM timeout: a long
+        # reasoning "derive" step, then a cheap "formalise" step that emits strict JSON.
+        derive_input: dict[str, Any] = {"task": task, "assignment": assignment}
+        if feedback:
+            derive_input["feedback"] = feedback
+        derive = await llm(f"Derive_{label}", derive_input)
+        await llm(f"Generator_{label}", {
+            "task": task, "assignment": assignment, "derivation": derive.get("response"),
+        })
+
+    # Candidates run concurrently. A candidate whose generation fails is NOT_FOUND
+    # alone; the run fails only if BOTH do.
+    results = await asyncio.gather(
+        generate("A", assign_a), generate("B", assign_b), return_exceptions=True
+    )
     gen_errors: dict[str, PipelineRunError] = {}
-    for label, assignment in (("A", assign_a), ("B", assign_b)):
-        try:
-            derive = await llm(f"Derive_{label}", {"task": task, "assignment": assignment})
-            await llm(f"Generator_{label}", {
-                "task": task, "assignment": assignment, "derivation": derive.get("response"),
-            })
-        except PipelineRunError as e:
-            gen_errors[label] = e
-            artifacts[f"criteria_{label.lower()}"] = _not_found_row(f"generation failed: {e}")
+    for label, res in zip(("A", "B"), results):
+        if isinstance(res, PipelineRunError):
+            gen_errors[label] = res
+            artifacts[f"criteria_{label.lower()}"] = _not_found_row(f"generation failed: {res}")
+        elif isinstance(res, BaseException):
+            raise res
     if len(gen_errors) == 2:
         raise gen_errors["B"]
     for label in ("A", "B"):
         if label not in gen_errors:
-            await _evaluate_candidate(label, f"Generator_{label}", nodes, spec_path, artifacts)
+            await _evaluate_candidate(
+                label, f"Generator_{label}", nodes, spec_path, artifacts, seed=round_no
+            )
 
     verdicts = {l: artifacts[f"criteria_{l.lower()}"]["verdict"] for l in ("A", "B")}
-    best = max(("A", "B"), key=lambda l: (_RANK[verdicts[l]], l == "A"))
-    verdict = verdicts[best]
-    if verdict == "NOT_FOUND":
-        return verdict, best
+    best = max(
+        ("A", "B"),
+        key=lambda l: (
+            _RANK[verdicts[l]],
+            -len(artifacts[f"criteria_{l.lower()}"].get("unmet_hard", [])),
+            l == "A",
+        ),
+    )
+    return verdicts[best], best
 
-    criteria = artifacts[f"criteria_{best.lower()}"]
-    candidate = artifacts[f"Generator_{best}"].get("response")
+
+async def _review(
+    client: httpx.AsyncClient, gateway_url: str, token: str, spec: ConstructSpec,
+    nodes: dict[str, TransformSpec], best_artifacts: dict[str, dict[str, Any]],
+    best_label: str, verdict: str, store: dict[str, dict[str, Any]],
+) -> None:
+    task = _task_payload(spec)
+    llm = _make_llm(client, gateway_url, token, nodes, store)
+    criteria = best_artifacts[f"criteria_{best_label.lower()}"]
+    candidate = best_artifacts[f"Generator_{best_label}"].get("response")
     critic = await llm("construct_critic", {
         "task": task, "candidate": candidate, "criteria": criteria, "verdict": verdict,
     })
@@ -201,10 +314,9 @@ async def _run_round(
         "task": task, "candidate": candidate, "criteria": criteria, "verdict": verdict,
         "construct_critic": critic, "devils_advocate": devil,
     })
-    artifacts["synthesizer"] = {
+    store["synthesizer"] = {
         **synth, "response": _enforce_verdict_line(synth.get("response", ""), verdict),
     }
-    return verdict, best
 
 
 async def run_construct(
@@ -214,31 +326,81 @@ async def run_construct(
     pipeline_path: Path,
     models_path: Path,
     transport: httpx.BaseTransport | None = None,
+    *,
+    max_rounds: int | None = None,
+    prices_path: Any = None,
 ) -> dict[str, Any]:
     spec = load_construct_spec(spec_path)
     text = render_pipeline_yaml(pipeline_path, models_path)
     nodes = PipelineSpec.from_yaml_text(text).by_name()
-    artifacts: dict[str, dict[str, Any]] = {}
+    prices = load_prices(prices_path or _DEFAULT_PRICES_PATH)
+    rounds_limit = max(1, max_rounds if max_rounds is not None else int(spec.budget.get("max_rounds", 1)))
+    max_usd = spec.budget.get("max_usd")
+    wallclock = spec.budget.get("max_wallclock_seconds")
     session_id = f"local-{uuid.uuid4().hex[:12]}"
     started = time.monotonic()
 
-    def packed() -> list[dict[str, Any]]:
-        return [{"transform_name": n, "data": d} for n, d in artifacts.items()]
+    rounds: list[dict[str, Any]] = []
+    raw: dict[int, dict[str, dict[str, Any]]] = {}
+    history: list[dict[str, Any]] = []
+    review: dict[str, dict[str, Any]] = {}
+    current: dict[str, dict[str, Any]] = {}
+    stop_reason = "max_rounds"
+
+    def failed(error: str) -> dict[str, Any]:
+        return {"status": "failed", "session_id": session_id, "error": error,
+                "artifacts": _packed(current)}
 
     try:
-        async with asyncio.timeout(spec.budget.get("max_wallclock_seconds")):
+        async with asyncio.timeout(wallclock):
             async with httpx.AsyncClient(timeout=30.0, transport=transport) as client:
-                verdict, best = await _run_round(
-                    client, gateway_url, token, spec, str(spec_path), nodes, artifacts
-                )
+                for n in range(1, rounds_limit + 1):
+                    current = {}
+                    try:
+                        verdict, best = await _run_round(
+                            client, gateway_url, token, spec, str(spec_path), nodes,
+                            current, n, history,
+                        )
+                    except (NonRetryableTransformError, PipelineRunError) as e:
+                        if not rounds:
+                            raise
+                        stop_reason = f"round_failed: {e}"
+                        break
+                    raw[n] = current
+                    cost, _ = run_cost_usd(current.values(), prices)
+                    rounds.append({"round": n, "verdict": verdict, "best_candidate": best,
+                                   "cost_usd": cost, "artifacts": _packed(current)})
+                    history.append(_round_summary(n, verdict, best, current))
+                    if verdict == "CONSTRUCTED":
+                        stop_reason = "constructed"
+                        break
+                    if max_usd is not None and sum(r["cost_usd"] for r in rounds) >= float(max_usd):
+                        stop_reason = "max_usd"
+                        break
+                best_h = max(history, key=_round_score)
+                if best_h["verdict"] != "NOT_FOUND":
+                    try:
+                        await _review(
+                            client, gateway_url, token, spec, nodes, raw[best_h["round"]],
+                            best_h["best_candidate"], best_h["verdict"], review,
+                        )
+                    except PipelineRunError as e:
+                        review["review_error"] = {"error": str(e)}
     except TimeoutError:
-        error = f"wallclock budget of {spec.budget.get('max_wallclock_seconds')}s exceeded"
-        return {"status": "failed", "session_id": session_id, "error": error, "artifacts": packed()}
+        if not rounds:
+            return failed(f"wallclock budget of {wallclock}s exceeded")
+        stop_reason = "wallclock"
     except (NonRetryableTransformError, PipelineRunError) as e:
-        return {"status": "failed", "session_id": session_id, "error": str(e), "artifacts": packed()}
+        return failed(str(e))
 
+    best_h = max(history, key=_round_score)
+    all_datas = [d for r in raw.values() for d in r.values()] + list(review.values())
+    total_cost, unpriced = run_cost_usd(all_datas, prices)
     return {
-        "status": "completed", "session_id": session_id, "verdict": verdict,
-        "best_candidate": best, "elapsed_seconds": round(time.monotonic() - started, 2),
-        "artifacts": packed(),
+        "status": "completed", "session_id": session_id, "verdict": best_h["verdict"],
+        "best_candidate": best_h["best_candidate"], "best_round": best_h["round"],
+        "stop_reason": stop_reason, "rounds": rounds, "cost_usd": total_cost,
+        "unpriced_models": unpriced, "token_usage": usage_by_model(all_datas),
+        "elapsed_seconds": round(time.monotonic() - started, 2),
+        "artifacts": _packed(raw[best_h["round"]]) + _packed(review),
     }
