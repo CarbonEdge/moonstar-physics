@@ -246,3 +246,21 @@ QuTiP-based multi-particle/entanglement systems, live external data, Studio
 UI wiring, Standard-Model-suppression-vs-hard-violation classification,
 gauge-anomaly-cancellation arithmetic, and any general Lie-theory or
 proof-checking engine.
+
+## Evaluation harness and adversarial corpus (P4.0)
+
+Measure before tuning. No model/prompt/parameter change counts as an improvement without these.
+
+- **Corpus:** `tests/corpus/*.json` + `tests/corpus/expected.yaml` - real, degenerate and synthetic
+  candidates, each with the verdict a *correct* checker must give and a written reason.
+  `tests/test_corpus_verdicts.py` replays them (no LLM, no Docker) and only lets known-genuine
+  candidates be CONSTRUCTED. Add every new degenerate family you see here.
+- **Replay / diagnose:** `moonstar_physics.construct_replay.replay_candidate(spec, candidate)` runs the
+  deterministic pipeline on one candidate. `python scripts/diagnose_residuals.py [run.json ...]`
+  classifies every candidate in saved runs (`ok` / `scale` / `localised` / `wrong` / `undefined`).
+- **Bench:** `python scripts/bench_construct.py <spec> --tag <tag> --n 5 [--max-rounds R] [--models PATH]`
+  runs the config N times sequentially (one live run at a time) into
+  `constructs/_bench/<date>-<tag>/`; `python scripts/bench_report.py <dir>` rebuilds `summary.md`.
+  Commit `summary.md` only; raw run JSON is git-ignored. **All costs are provisional** (token x
+  price table; the gateway reports 0.0) and N < 10 prints a warning; read the Wilson intervals.
+
