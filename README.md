@@ -131,19 +131,43 @@ in the workspace root.
 
 ## Construct pipeline (Phase 2: one round)
 
-Planner → two independent Generators → deterministic checks + sandboxed
-field-line trace → checklist → critic / devil's advocate / synthesizer.
-Needs the moonstar-rs gateway (`bash scripts/harness.sh` there; export
-`OPENROUTER_API_KEY` first) and the sandbox image (`bash scripts/build_sandbox_image.sh`).
+Planner -> per candidate (x2): **Derive** (v4-pro, long reasoning, free-form
+maths) -> **Formalise** (flash, strict JSON) -> deterministic checks + sandboxed
+field-line trace -> checklist -> critic / devil's advocate / synthesizer (only
+for a candidate that passed the symbolic gate). The verdict is computed by
+code; the synthesizer's first line is overwritten to match it.
+
+Needs:
+- the moonstar-rs gateway **built from a version whose `LlmTransform` supports
+  the optional `timeout_seconds` and `reasoning` config** (moonstar-rs master,
+  commits 09ebe11 + 430619c - rebuild the gateway binary if yours predates it;
+  without it every reasoning call over 180 s fails with "error decoding
+  response body"). `bash scripts/harness.sh`
+  there, with `OPENROUTER_API_KEY` exported.
+- Docker running, and the sandbox image (`bash scripts/build_sandbox_image.sh`).
 
 ```bash
-MOONSTAR_AUTH_TOKEN=<token> python scripts/run_construct.py \n    constructs/analytic-3d-mhd-equilibrium.yaml
+MOONSTAR_AUTH_TOKEN=<token> python scripts/run_construct.py     constructs/analytic-3d-mhd-equilibrium.yaml
 ```
 
-Prints `VERDICT: CONSTRUCTED | PARTIAL | NOT_FOUND` (computed by code, not
-by the LLM), the checklist, token usage per model, and saves the full run to
-`constructs/<slug>/runs/<session_id>.json`. This spends real money. Numeric
-evidence only: `CONSTRUCTED` is not novelty and not proof.
+Expect **~30-50 minutes** and real spend (Derive is ~10+ minutes per
+candidate; LLM steps get a 20 min polling ceiling and one retry). Prints
+`VERDICT: CONSTRUCTED | PARTIAL | NOT_FOUND`, the checklist, token usage per
+model (successful calls only), and saves the full run - candidates, filled
+iota scripts, sandbox stdout, checklists - to
+`constructs/<slug>/runs/<session_id>.json`.
+
+Reading a result:
+- `NOT_FOUND` means a *gate* criterion (div B / B.grad psi / force balance) was
+  unmet; the checklist still shows which other criteria passed. The iota trace
+  is skipped when the gate fails (its rows are `unverified`).
+- A candidate whose generation fails is `NOT_FOUND` on its own (`error` field
+  in its `criteria_*` artifact); the run fails only if both do.
+- Numeric evidence only: `CONSTRUCTED` is not novelty and not proof.
+
+Known limits (Phase 3): single round, no feedback loop, no `max_usd`
+enforcement, critic/devil/synthesizer not yet exercised live, Derive steps can
+exhaust their token budget on reasoning (v4-pro) and return nothing.
 
 ## Paper Reviews
 
