@@ -3,7 +3,7 @@
   "MODEL_CRITIC": "deepseek/deepseek-v4-pro",
   "MODEL_DECISION_MAKER": "deepseek/deepseek-v4-pro",
   "MODEL_SUMMARIZER": "deepseek/deepseek-v4-flash",
-  "MODEL_PLANNER": "~deepseek/deepseek-v4-flash-latest",
+  "MODEL_PLANNER": "deepseek/deepseek-v4.1-flash",
   "MODEL_GENERATOR": "deepseek/deepseek-v4-pro",
-  "MODEL_CONSTRUCT_REVIEW": "~deepseek/deepseek-v4-flash-latest"
+  "MODEL_CONSTRUCT_REVIEW": "deepseek/deepseek-v4.1-flash"
 }

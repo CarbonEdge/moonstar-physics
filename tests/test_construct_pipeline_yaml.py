@@ -20,7 +20,7 @@ def test_models_json_has_construct_entries():
     models = json.loads(_MODELS.read_text(encoding="utf-8"))
     assert models["MODEL_PLANNER"] and models["MODEL_GENERATOR"] and models["MODEL_CONSTRUCT_REVIEW"]
     assert models["MODEL_GENERATOR"] == "deepseek/deepseek-v4-pro"      # hard work only
-    assert models["MODEL_PLANNER"] == models["MODEL_CONSTRUCT_REVIEW"] == "~deepseek/deepseek-v4-flash-latest"
+    assert models["MODEL_PLANNER"] == models["MODEL_CONSTRUCT_REVIEW"] == "deepseek/deepseek-v4.1-flash"
 
 
 def test_no_unfilled_placeholders():

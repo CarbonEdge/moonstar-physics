@@ -4,6 +4,7 @@
   "note": "Aliases (~...-latest) are priced as the model they resolved to on as_of. Reasoning tokens are billed as output tokens. Refresh when pipelines/models.json changes. Costs are estimates from successful calls only.",
   "models": {
     "~deepseek/deepseek-v4-flash-latest": {"input_usd_per_token": 0.00000001, "output_usd_per_token": 0.00000128},
+    "deepseek/deepseek-v4.1-flash": {"input_usd_per_token": 0.0000003, "output_usd_per_token": 0.0000012},
     "deepseek/deepseek-v4-flash": {"input_usd_per_token": 0.00000014, "output_usd_per_token": 0.00000028},
     "deepseek/deepseek-v4-pro": {"input_usd_per_token": 0.00000095526, "output_usd_per_token": 0.00000191052}
   }
