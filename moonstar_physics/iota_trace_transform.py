@@ -38,11 +38,13 @@ def _row(c: Criterion, status: str, **extra: Any) -> dict[str, Any]:
     return {"id": c.id, "check": c.check, "status": status, **extra}
 
 
-def _judge(c: Criterion, iota: float, extra: dict[str, Any]) -> dict[str, Any]:
+def _judge(c: Criterion, iotas: list[float], iota: float, extra: dict[str, Any]) -> dict[str, Any]:
+    """Judged on every seed surface: iota may differ between surfaces (magnetic shear)."""
     if c.kind == "iota_nonzero":
-        ok = abs(iota) > _IOTA_ZERO_TOL
-    else:  # iota_noninteger — construct_spec guarantees the kind is known
-        ok = abs(iota - round(iota)) > _INTEGER_TOL
+        same_sign = all(v > 0 for v in iotas) or all(v < 0 for v in iotas)
+        ok = same_sign and all(abs(v) > _IOTA_ZERO_TOL for v in iotas)
+    else:  # iota_noninteger; construct_spec guarantees the kind is known
+        ok = all(abs(v - round(v)) > _INTEGER_TOL for v in iotas)
     return _row(c, "pass" if ok else "fail", iota=iota, **extra)
 
 
@@ -83,5 +85,17 @@ async def IotaTraceTransform(
         detail = result.get("error") if isinstance(result, dict) and "error" in result else "no numeric 'iota' in RESULT"
         return all_error(str(detail), **common)
 
-    extra = {"iota_seeds": result.get("iota_seeds"), "psi_drift": result.get("psi_drift")}
-    return {"results": [_judge(c, float(result["iota"]), extra) for c in targets], **common, **_META}
+    seeds = result.get("iota_seeds")
+    if isinstance(seeds, list) and seeds and all(isinstance(v, (int, float)) for v in seeds):
+        iotas = [float(v) for v in seeds]
+    else:
+        iotas = [float(result["iota"])]
+    extra = {
+        "iota_seeds": result.get("iota_seeds"),
+        "iota_spread": result.get("iota_spread"),
+        "psi_drift": result.get("psi_drift"),
+    }
+    return {
+        "results": [_judge(c, iotas, float(result["iota"]), extra) for c in targets],
+        **common, **_META,
+    }

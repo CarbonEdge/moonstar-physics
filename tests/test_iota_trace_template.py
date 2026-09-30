@@ -79,3 +79,12 @@ def test_script_contains_only_fixed_imports_and_no_dunder():
     assert imports == ["json", "numpy", "scipy.integrate", "scipy.optimize"]
     body = script.replace("__main__", "").replace("__name__", "")
     assert "__" not in body
+
+
+def test_sheared_equilibrium_reports_spread_instead_of_erroring():
+    cand = json.loads((Path(__file__).parent / "fixtures" / "solovev_candidate.json").read_text(encoding="utf-8"))
+    out = run_script_locally(_script_for(cand))
+    assert "error" not in out, out
+    assert out["iota_spread"] > 1e-2                       # magnetic shear
+    assert all(1.5 < v < 2.5 for v in out["iota_seeds"])
+    assert out["psi_drift"] < 1e-6

@@ -1,0 +1,35 @@
+slug: axisymmetric-mhd-equilibrium
+title: Axisymmetric MHD equilibrium with nested toroidal flux surfaces (known-answer control)
+statement: >
+  Find an explicit axisymmetric magnetic field B in a toroidal region around
+  the circle x^2 + y^2 = 1, z = 0 (a closed magnetic axis at major radius 1),
+  with flux function psi (psi >= 0, psi = 0 on that axis, nested toroidal
+  surfaces psi = const), divergence-free, in MHD force balance
+  (curl B) x B = grad p with p = p(psi), and nonzero rotational transform.
+  Axisymmetric solutions are allowed (this is the classical Grad-Shafranov
+  setting). Give B, psi, p as closed-form expressions in Cartesian (x, y, z);
+  cylindrical R = sqrt(x^2 + y^2) may be used through a definition.
+unknowns:
+  - {name: B,   kind: vector_field, vars: [x, y, z]}
+  - {name: psi, kind: scalar_field, vars: [x, y, z]}
+  - {name: p,   kind: scalar_field, of: psi}
+criteria:
+  hard:
+    - {id: div_free,        check: divergence_zero, expr: "div(B)"}
+    - {id: flux_surface,    check: identity_zero,   expr: "dot(B, grad(psi))"}
+    - {id: force_balance,   check: identity_zero,   expr: "cross(curl(B), B) - grad(p)"}
+    - {id: psi_nonneg,      check: numeric_sample,  kind: nonnegative, target: psi}
+    - {id: psi_nonconstant, check: numeric_sample,  kind: nonconstant, target: psi}
+    - {id: p_nonconstant,   check: numeric_sample,  kind: nonconstant, target: p}
+    - {id: iota_nonzero,    check: sandbox_experiment, kind: iota_nonzero, note: "field-line trace, |iota| > 1e-3 on every seed surface"}
+  soft:
+    - {id: iota_noninteger, check: sandbox_experiment, kind: iota_noninteger, note: "no seed surface within 1e-3 of an integer"}
+mechanism_hints:
+  - Grad-Shafranov equation
+  - polynomial flux function in R^2 and z
+degrees_of_freedom: []
+sample_box:
+  x: [0.6, 1.4]
+  y: [-0.4, 0.4]
+  z: [-0.4, 0.4]
+budget: {max_usd: 5.00, max_wallclock_seconds: 3600, max_rounds: 3}

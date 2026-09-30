@@ -105,3 +105,27 @@ async def test_iota2_end_to_end_is_constructed_with_sandbox_stage(monkeypatch):
     )
     assert out["verdict"] == "CONSTRUCTED"
     assert {r["id"]: r["status"] for r in out["checklist"]}["iota_noninteger"] == "unmet"
+
+
+async def test_solovev_equilibrium_is_constructed_under_the_second_spec(monkeypatch):
+    """Known-answer control: a correct sheared axisymmetric equilibrium must be CONSTRUCTED."""
+    import json as _json
+    from pathlib import Path as _P
+    from moonstar_physics import iota_trace_transform as iota_mod
+    from moonstar_physics._compat import SessionContext
+    from moonstar_physics.construct_criteria_transform import ConstructCriteriaTransform
+    from moonstar_physics.iota_trace_transform import IotaTraceTransform
+    from moonstar_physics.vector_calculus_check_transform import VectorCalculusCheckTransform
+    from .iota_helpers import fake_sandbox
+
+    monkeypatch.setattr(iota_mod, "_run_sandbox", fake_sandbox)
+    root = _P(__file__).parent.parent
+    spec = str(root / "constructs" / "axisymmetric-mhd-equilibrium.yaml")
+    cand = _json.loads((_P(__file__).parent / "fixtures" / "solovev_candidate.json").read_text(encoding="utf-8"))
+    inp = {"G": {"response": _json.dumps(cand)}}
+    ctx = SessionContext()
+    checks = await VectorCalculusCheckTransform(inp, {"spec_path": spec, "source": "G"}, ctx)
+    iota = await IotaTraceTransform(inp, {"spec_path": spec, "source": "G"}, ctx)
+    out = await ConstructCriteriaTransform({"checks": checks, "iota": iota}, {"spec_path": spec, "sources": ["checks", "iota"]}, ctx)
+    assert out["verdict"] == "CONSTRUCTED", out["checklist"]
+    assert out["unmet_hard"] == [] and out["unverified_hard"] == []

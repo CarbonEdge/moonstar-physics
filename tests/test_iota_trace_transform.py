@@ -112,3 +112,31 @@ async def test_real_docker_sandbox_gives_minus_two():
     row = _by_id(out)["iota_nonzero"]
     assert row["status"] == "pass", out["stdout"]
     assert abs(row["iota"] + 2.0) < 1e-4
+
+
+def _sandbox_returning(result):
+    async def fake(script, timeout_seconds):
+        return {"ran": True, "result": result, "detail": None, "stdout": "", "exit_code": 0}
+    return fake
+
+
+async def test_sheared_seeds_are_judged_on_every_surface(monkeypatch):
+    monkeypatch.setattr(mod, "_run_sandbox", _sandbox_returning(
+        {"iota": 1.9, "iota_seeds": [1.956, 1.837], "iota_spread": 0.119}))
+    rows = _by_id(await IotaTraceTransform(_inp(_FIXTURE), {"spec_path": _SPEC}, _CTX))
+    assert rows["iota_nonzero"]["status"] == "pass"
+    assert rows["iota_noninteger"]["status"] == "pass"
+    assert rows["iota_nonzero"]["iota_spread"] == pytest.approx(0.119)
+
+
+async def test_sign_change_between_surfaces_fails_nonzero(monkeypatch):
+    monkeypatch.setattr(mod, "_run_sandbox", _sandbox_returning({"iota": 0.0, "iota_seeds": [0.4, -0.4]}))
+    rows = _by_id(await IotaTraceTransform(_inp(_FIXTURE), {"spec_path": _SPEC}, _CTX))
+    assert rows["iota_nonzero"]["status"] == "fail"
+
+
+async def test_one_surface_near_an_integer_fails_noninteger(monkeypatch):
+    monkeypatch.setattr(mod, "_run_sandbox", _sandbox_returning({"iota": 2.15, "iota_seeds": [2.0004, 2.3]}))
+    rows = _by_id(await IotaTraceTransform(_inp(_FIXTURE), {"spec_path": _SPEC}, _CTX))
+    assert rows["iota_nonzero"]["status"] == "pass"
+    assert rows["iota_noninteger"]["status"] == "fail"

@@ -144,3 +144,13 @@ def test_real_spec_sandbox_criteria_have_kinds():
     spec = load_construct_spec(Path(__file__).parent.parent / "constructs" / "analytic-3d-mhd-equilibrium.yaml")
     kinds = {c.id: c.kind for c in spec.criteria if c.check == "sandbox_experiment"}
     assert kinds == {"iota_nonzero": "iota_nonzero", "iota_noninteger": "iota_noninteger"}
+
+
+def test_second_spec_loads_and_is_axisymmetric_control():
+    from pathlib import Path
+    from moonstar_physics.construct_spec import load_construct_spec
+
+    spec = load_construct_spec(Path(__file__).parent.parent / "constructs" / "axisymmetric-mhd-equilibrium.yaml")
+    ids = {c.id for c in spec.criteria}
+    assert "nonaxisym" not in ids and "iota_nonzero" in ids
+    assert spec.degrees_of_freedom == ()

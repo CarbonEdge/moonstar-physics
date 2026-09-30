@@ -11,7 +11,8 @@ axis). A field line is traced with d(rho, z)/d(phi) = rho * (B_rho, B_z) / B_phi
 for one toroidal turn from two seed offsets; iota = (unwrapped change in the
 meridional angle about the axis) / 2*pi. The script reports `error` — never a
 number — when the trace can't be trusted (no zero minimum of psi, B_phi
-vanishing, non-finite field, integration failure, psi drift, seed disagreement).
+vanishing, non-finite field, integration failure, psi drift). The seed surfaces
+may legitimately differ in iota (magnetic shear); the spread is reported.
 This is numeric evidence, not proof.
 """
 from __future__ import annotations
@@ -42,7 +43,6 @@ SEED_OFFSETS = (0.05, 0.1)
 N_STEPS = 200
 AXIS_PSI_TOL = 1e-6
 PSI_DRIFT_TOL = 1e-4
-SEED_AGREEMENT_TOL = 1e-3
 BPHI_MIN = 1e-9
 
 
@@ -105,9 +105,9 @@ def main():
         iotas.append(float((theta[-1] - theta[0]) / (2 * np.pi)))
     if drift > PSI_DRIFT_TOL:
         return {"error": "field line does not stay on a psi surface (max psi drift %.3g)" % drift}
-    if max(iotas) - min(iotas) > SEED_AGREEMENT_TOL:
-        return {"error": "seed offsets disagree on iota: %r" % (iotas,)}
+    # iota may legitimately differ between the seed surfaces (magnetic shear): report it.
     return {"iota": sum(iotas) / len(iotas), "iota_seeds": iotas,
+            "iota_spread": max(iotas) - min(iotas),
             "psi_drift": float(drift), "axis_psi_min": psi_min}
 
 
