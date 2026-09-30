@@ -11,7 +11,8 @@ axis). A field line is traced with d(rho, z)/d(phi) = rho * (B_rho, B_z) / B_phi
 for one toroidal turn from two seed offsets; iota = (unwrapped change in the
 meridional angle about the axis) / 2*pi. The script reports `error` — never a
 number — when the trace can't be trusted (no zero minimum of psi, B_phi
-vanishing, non-finite field, integration failure, psi drift). The seed surfaces
+vanishing, non-finite field, integration failure, psi drift, or an axis on
+the z-axis, which is a straight line and not a closed toroidal axis). The seed surfaces
 may legitimately differ in iota (magnetic shear); the spread is reported.
 This is numeric evidence, not proof.
 """
@@ -42,6 +43,7 @@ Z_LO, Z_HI = @@Z_LO@@, @@Z_HI@@
 SEED_OFFSETS = (0.05, 0.1)
 N_STEPS = 200
 AXIS_PSI_TOL = 1e-6
+AXIS_RHO_MIN = 0.1   # the axis must be a ring around the z-axis, not on it
 PSI_DRIFT_TOL = 1e-4
 BPHI_MIN = 1e-9
 
@@ -86,6 +88,8 @@ def main():
     ax0, psi_min = find_axis(0.0, starts)
     if psi_min > AXIS_PSI_TOL:
         return {"error": "psi has no zero minimum in the meridional plane (min %.3g)" % psi_min}
+    if ax0[0] < AXIS_RHO_MIN:
+        return {"error": "magnetic axis lies on the z-axis (rho=%.3g), not a closed toroidal axis" % ax0[0]}
     phis = np.linspace(0.0, 2 * np.pi, N_STEPS + 1)
     iotas = []
     drift = 0.0

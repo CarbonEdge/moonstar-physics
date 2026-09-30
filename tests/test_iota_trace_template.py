@@ -88,3 +88,12 @@ def test_sheared_equilibrium_reports_spread_instead_of_erroring():
     assert out["iota_spread"] > 1e-2                       # magnetic shear
     assert all(1.5 < v < 2.5 for v in out["iota_seeds"])
     assert out["psi_drift"] < 1e-6
+
+
+def test_axis_on_the_z_axis_is_not_a_toroidal_axis():
+    """Regression (live run 2026-09-30): a z-independent 'screw pinch' has psi = 0 on the straight
+    line x = y = 0. That is not a closed toroidal axis; the trace must not report an iota for it."""
+    cand = json.loads((Path(__file__).parent / "fixtures" / "screw_pinch_candidate.json").read_text(encoding="utf-8"))
+    out = run_script_locally(_script_for(cand, {"epsilon": 0.5}))
+    assert set(out) == {"error"} and "z-axis" in out["error"]
+

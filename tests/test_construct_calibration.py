@@ -129,3 +129,30 @@ async def test_solovev_equilibrium_is_constructed_under_the_second_spec(monkeypa
     out = await ConstructCriteriaTransform({"checks": checks, "iota": iota}, {"spec_path": spec, "sources": ["checks", "iota"]}, ctx)
     assert out["verdict"] == "CONSTRUCTED", out["checklist"]
     assert out["unmet_hard"] == [] and out["unverified_hard"] == []
+
+
+async def test_z_independent_screw_pinch_is_not_constructed(monkeypatch):
+    """Regression: a live run called this CONSTRUCTED because the tracer accepted an axis on the z-axis."""
+    import json as _json
+    from pathlib import Path as _P
+    from moonstar_physics import iota_trace_transform as iota_mod
+    from moonstar_physics._compat import SessionContext
+    from moonstar_physics.construct_criteria_transform import ConstructCriteriaTransform
+    from moonstar_physics.iota_trace_transform import IotaTraceTransform
+    from moonstar_physics.vector_calculus_check_transform import VectorCalculusCheckTransform
+    from .iota_helpers import fake_sandbox
+
+    monkeypatch.setattr(iota_mod, "_run_sandbox", fake_sandbox)
+    root = _P(__file__).parent.parent
+    spec = str(root / "constructs" / "analytic-3d-mhd-equilibrium.yaml")
+    cand = _json.loads((_P(__file__).parent / "fixtures" / "screw_pinch_candidate.json").read_text(encoding="utf-8"))
+    inp = {"G": {"response": _json.dumps(cand)}}
+    ctx = SessionContext()
+    checks = await VectorCalculusCheckTransform(inp, {"spec_path": spec, "source": "G"}, ctx)
+    iota = await IotaTraceTransform(inp, {"spec_path": spec, "source": "G", "timeout_seconds": 120}, ctx)
+    out = await ConstructCriteriaTransform({"checks": checks, "iota": iota}, {"spec_path": spec, "sources": ["checks", "iota"]}, ctx)
+    assert out["verdict"] == "PARTIAL", out["checklist"]
+    assert out["unverified_hard"] == ["iota_nonzero"]
+    detail = next(r for r in out["checklist"] if r["id"] == "iota_nonzero")["evidence"]["detail"]
+    assert "z-axis" in detail
+
