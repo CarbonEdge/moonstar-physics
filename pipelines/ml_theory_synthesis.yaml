@@ -1,0 +1,93 @@
+pipeline:
+  name: ml-theory-synthesis
+  version: "1.0"
+  description: >
+    Synthesize an empirical theory of how to train, model and scale from a
+    summary of experimental rounds. Three parallel theorists (scaling,
+    data/labels, evaluation/noise), an evidence critic that rejects any
+    claim the data table does not support, then a synthesizer. Generation
+    plus adversarial critique only -- no deterministic checker applies.
+
+transforms:
+  - name: scaling_theorist
+    type: LlmTransform
+    config:
+      model: "{{MODEL_GENERATOR}}"
+      max_tokens: 3000
+      system: |
+        You receive "data_summary", a markdown account of rounds of one
+        Kaggle medical-imaging project (public score, local CV, change per
+        round, compute). Propose a model of how performance depends on
+        MODEL (capacity, pretraining domain, input resolution), COMPUTE
+        (GPU/TPU/CPU, frozen vs fine-tuned) and DATA SCALE. For each
+        factor: the claimed effect size WITH the round pair that supports
+        it, a functional form only if two or more data points justify it
+        (otherwise say "underdetermined"), and the confound that limits it.
+        End with a ranked list of the experiments that would best separate
+        the confounded factors. Be concrete and quantitative; no filler.
+  - name: data_theorist
+    type: LlmTransform
+    config:
+      model: "{{MODEL_GENERATOR}}"
+      max_tokens: 3000
+      system: |
+        You receive "data_summary" (see rounds table). Focus ONLY on input
+        correctness, label quantity and label quality (gold vs LLM pseudo
+        labels, confidence weighting, preprocessing/geometry fixes).
+        Propose a theory of why these dominated the gains, a rule for what
+        to fix first on a new task, and what the pseudo-label noise ceiling
+        could be. Cite round pairs for every effect size. Mark every claim
+        as SUPPORTED, WEAK or SPECULATIVE.
+  - name: evaluation_theorist
+    type: LlmTransform
+    config:
+      model: "{{MODEL_GENERATOR}}"
+      max_tokens: 3000
+      system: |
+        You receive "data_summary". Focus ONLY on measurement: local CV on
+        58 gold studies vs public score, the CV-public gap, fold spread,
+        and whether round-to-round differences are distinguishable from
+        noise. Quantify (from the table) the gap and the ordering
+        disagreement. Propose a validation protocol that would make
+        decisions reliable, and state which past "improvements" or
+        "regressions" are not statistically meaningful.
+  - name: evidence_critic
+    type: LlmTransform
+    input: [scaling_theorist, data_theorist, evaluation_theorist]
+    config:
+      model: "{{MODEL_CRITIC}}"
+      max_tokens: 3000
+      system: |
+        You receive three theory drafts built from a data summary (not
+        provided again; judge internal consistency and the evidence they
+        cite). Act as an adversarial reviewer. List: (1) claims whose cited
+        evidence does not support the stated effect size; (2) claims where a
+        confound is ignored (e.g. several changes in one round); (3)
+        contradictions between the drafts; (4) over-fitted functional forms
+        from two points; (5) the single most important thing all three
+        drafts miss. Be specific, quote the claim, and be brief.
+  - name: synthesizer
+    type: LlmTransform
+    input: [scaling_theorist, data_theorist, evaluation_theorist, evidence_critic]
+    config:
+      model: "{{MODEL_DECISION_MAKER}}"
+      max_tokens: 12000
+      system: |
+        Produce the final document: "A working theory of how to train,
+        model and scale", in markdown. Use ONLY claims that survived the
+        evidence critic; downgrade or drop the rest. Structure:
+        1. Core thesis (3 sentences max).
+        2. The ordering rule: what to fix/scale first, second, third, each
+           with its evidence (round pair, effect size).
+        3. Scaling model: what is quantified, what is underdetermined.
+        4. Measurement protocol (how to decide between rounds reliably).
+        5. Falsifiable predictions for the next rounds (numeric ranges for
+           public score where justified; say so when not).
+        6. Ranked experiment plan for 30 h GPU + 16 h TPU + free CPU.
+        7. What this theory cannot yet explain.
+        Executive style: bullets, tables, no walls of text. Every
+        quantitative claim names its source rounds.
+
+budget:
+  max_usd: 2.00
+  max_wallclock_seconds: 600
