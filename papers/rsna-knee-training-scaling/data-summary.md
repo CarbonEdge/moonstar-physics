@@ -1,4 +1,4 @@
-# RSNA Knee Abnormality Detection — empirical data summary (rounds 5–18)
+# RSNA Knee Abnormality Detection — empirical data summary (rounds 5–21, updated 2026-10-03)
 
 Source: `moonstar-kaggle/runs/rsna-knee-abnormality-detection/` + Kaggle submissions API (pulled 2026-10-03).
 Gold labels: **58 studies**. Pseudo-labels (LLM-derived from reports): **4,349 studies** (+ 22.8k-series pool from r12).
@@ -62,3 +62,45 @@ Metric: mean AUC over 12 targets. CV = local, on the 58-gold set (noise ≈ ±0.
 2. Scaling exponent in label count: only two points (≈4.3k vs ≈22.8k series) with other changes mixed in.
 3. Whether the gain is from model capacity, resolution, or domain-matched pretraining (r16 changes all three vs r12).
 4. Ceiling set by pseudo-label noise vs by model.
+
+
+---
+# UPDATE 2026-10-03 (later in the day): what happened after the first summary
+
+## 7. Leaderboard and the frontier
+- Leaderboard top now **0.961** (ranks 1-15 span 0.958-0.961). Our best public: **0.865** (r12). Top public notebooks in the shared pool: 0.937-0.943.
+- Frontier recipe (6 public notebooks read by the moonstar research pipeline): rank-averaged ensembles of many public members (20 DINOv2 + DINOv3, 4 CoAtNet arms, RadImageNet heads, A5 attention pooling), slot-based study-level inputs, dense slice sampling, per-finding routing weights. Only one step has a quoted ablation (RadImageNet 20% rank vote ~ +0.012); the 0.937 -> 0.943 ladder steps are documented, but authors call sub-0.003 changes noise.
+
+## 8. Scoring constraint discovered
+- The scoring rerun **cannot use TPU** ("Your Notebook cannot use TPU in this competition"). r16 TPU (CV 0.878) saved no weights, so it cannot be submitted as is.
+- Fix: train on TPU, save weights, score on GPU from a weights dataset (r19 train / r19 infer, `make_r19.py`).
+- Kaggle allows only **1 TPU batch session** at a time. r19 has been QUEUED for many hours and blocks r20.
+
+## 9. Runs and submissions since the first summary
+| Item | What | Status / result |
+|---|---|---|
+| **pub943** | unmodified reproduction of jiweiliu/rsna-knee-fast-2xt4-inference (0.943 public), GPU | ran OK; **submitted, ref 56797053, PENDING** (no score yet) |
+| r19 train | r16 recipe + saves per-fold weights (TPU) | QUEUED |
+| r19 infer | loads weights on GPU, test-only | built, untested |
+| r20 train | r19 + 28 auxiliary concept heads (AUX_W=0.15, ~31% of total loss weight) from LLM-extracted report attributes | built, local data dry-run passed; **push blocked** (TPU session limit) |
+| r20 infer | as r19 infer with aux-head slicing | built, untested |
+| r21 | public DINO-V5 + meniscus-specialist notebook (0.943 base + public0033 Medial Meniscus at 10%), demo-study swap removed, empty overlay stage for our own members | pushed to GPU, RUNNING; not submitted |
+
+## 10. Pseudo-label audit vs 58 gold (Step 0)
+Teacher AUC on gold (v4 blend): mean **0.893**; ACL .99, MCL .97, Medial Meniscus .95, Baker's .94, Medial OA .93, PF OA .90, Lateral Meniscus .88, Effusion .88, Contusion .86, Lateral OA .83, Fracture .79, Synovitis .79 (recall 0.48). Other tables: llm_labels_full .878, report_labels_v2 .870. The v4 blend was chosen using the same gold, so it is slightly optimistic.
+- Our best student (r16 CV 0.878) is about the teacher: **labels cap our own models**.
+- Effusion's problem is precision (0.69), not recall (1.00); synovitis is the recall problem.
+
+## 11. LLM attribute extraction (report text only, never images)
+- 4,404 of 4,407 reports turned into structured attributes (fracture type/location, contusion severity/location, synovitis extent, effusion size, lateral-OA grade, lateral-meniscus tear type/location) with deepseek-v4-flash via OpenRouter; ~3.6M input / 0.9M output tokens (~$1). Dataset `joe1dataset/rsna-knee-attrs` (private, CC0), 28 aux targets.
+- **Pilot result (58 gold): the extracted attributes do NOT beat the existing labels as labels** (AUC vs gold: Fracture .806 vs .793; Contusion .67-.70 vs .86; Synovitis .70 vs .79; Effusion .83 vs .88; Lateral OA .82 vs .83; Lateral Meniscus .82-.84 vs .88). Within noise at best. Their only value is as auxiliary training targets in r20 (untested).
+
+## 12. Moonstar research outputs (this repo)
+`research/decision.md` (+ reviewer corrections), `research/step0-pseudo-label-audit.md`, `theory.md`, `sources/` (digests of public notebooks), `variant-planning-context.md`. Pipeline lessons: reasoning models burn max_tokens on hidden thinking -> use `reasoning: {enabled: false}`; gateway spec limit is 64 KB (pass bulk text as initial_input).
+The decision doc's verdict (own-model path, 0.885-0.91) was overridden: the frontier is reachable by attaching public weights (14 free datasets). The user chose the hybrid.
+
+## 13. Statistics that govern decisions
+Hanley-McNeil SE of one finding's AUC on 58 studies: 0.042 (prev .5, AUC .9) to 0.197 (n=19, prev .1, AUC .8). CV differences below ~0.03 are not resolvable; the CV -> public gap is +0.02 to +0.033 with unstable ordering. Do not tune blends on gold or on the public LB (an author reports 0.906 -> 0.887 after label-wise selection).
+
+## 14. External assets reviewed (see `moonstar-kaggle/runs/rsna-knee-abnormality-detection/PROVENANCE.md`)
+Used (CC0 unless noted): pilkwang/stevenleehans labels, dreaddevelopment raptor, mattiaangeli weights. **Non-commercial:** RadImageNet weights/heads (CC-BY-NC-SA-4.0); our ResNet50 member derives from them. Reviewed, not applicable: CT/PET datasets, LegSegNet (CT, CC BY-NC), kneeseg (RF cartilage), MRNet (ACL/meniscus only; terms unchecked).
