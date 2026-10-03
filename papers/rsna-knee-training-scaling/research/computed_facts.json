@@ -1,0 +1,46 @@
+{
+  "AUC_standard_error_Hanley_McNeil (single finding)": {
+    "n=19,prev=0.1,auc=0.8": 0.197,
+    "n=19,prev=0.1,auc=0.9": 0.151,
+    "n=19,prev=0.3,auc=0.8": 0.121,
+    "n=19,prev=0.3,auc=0.9": 0.091,
+    "n=19,prev=0.5,auc=0.8": 0.104,
+    "n=19,prev=0.5,auc=0.9": 0.075,
+    "n=58,prev=0.1,auc=0.8": 0.112,
+    "n=58,prev=0.1,auc=0.9": 0.086,
+    "n=58,prev=0.3,auc=0.8": 0.07,
+    "n=58,prev=0.3,auc=0.9": 0.053,
+    "n=58,prev=0.5,auc=0.8": 0.059,
+    "n=58,prev=0.5,auc=0.9": 0.042
+  },
+  "note_on_SE": "mean over 12 findings shrinks noise by ~sqrt(12) only if findings are independent; they are not.",
+  "pixel_pitch_mm_at_130mm_crop": {
+    "224": 0.58,
+    "256": 0.508,
+    "336": 0.387,
+    "384": 0.339
+  },
+  "tear_width_1mm_needs_pitch_leq_mm": 0.5,
+  "cv_to_public_gap": {
+    "r12": 0.033,
+    "r13b": 0.021,
+    "r17": 0.031
+  },
+  "tpu_budget": {
+    "hours_available": 16,
+    "r16_recipe_hours_per_run": 3.5,
+    "full_runs_that_fit": 4
+  },
+  "gpu_budget": {
+    "hours_available": 30
+  },
+  "public_frontier": {
+    "0.937": "prvsiyan",
+    "0.940": "renta0426",
+    "0.941": "mattiaangeli",
+    "0.942": "maverickss26",
+    "0.943": "jiweiliu"
+  },
+  "our_best_public": 0.865,
+  "gap_to_frontier": 0.078
+}

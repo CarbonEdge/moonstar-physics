@@ -1,0 +1,576 @@
+pipeline:
+  name: ml-research
+  version: "1.0"
+  description: Read public sources, synthesize cross-source evidence, expert panel, red team, decision.
+
+transforms:
+  - name: reader_bend_the_knee_to_dinov3_ensembled
+    type: LlmTransform
+    config:
+      model: "deepseek/deepseek-v4-flash"
+      max_tokens: 2500
+      timeout_seconds: 600
+      reasoning: {enabled: false}
+      system: |
+        You are a research analyst reading ONE source: a public Kaggle notebook from a competition on knee-MRI abnormality detection (12 findings, mean AUC). Extract, faithfully and without inventing anything: (1) the headline claim and any score it reports, with the version/evidence; (2) every concrete technique (architecture, input design, slice counts, resolution, preprocessing, label handling, loss, aggregation, blending/routing weights, TTA) with the numbers given; (3) any ablation or measured effect size, quoted; (4) what resources it attaches (datasets/weights) and what it requires to reproduce; (5) the author's own warnings or caveats; (6) your confidence that each technique is a real cause of score (SUPPORTED by an ablation / ASSERTED / UNCLEAR). Use compact bullets. Quote numbers exactly.
+
+        Your input JSON has a key "sources" mapping source names to their text. Analyse ONLY the source named `bend-the-knee-to-dinov3-ensembled` and ignore the others.
+  - name: reader_bend_the_knee_to_the_dinosaurs
+    type: LlmTransform
+    config:
+      model: "deepseek/deepseek-v4-flash"
+      max_tokens: 2500
+      timeout_seconds: 600
+      reasoning: {enabled: false}
+      system: |
+        You are a research analyst reading ONE source: a public Kaggle notebook from a competition on knee-MRI abnormality detection (12 findings, mean AUC). Extract, faithfully and without inventing anything: (1) the headline claim and any score it reports, with the version/evidence; (2) every concrete technique (architecture, input design, slice counts, resolution, preprocessing, label handling, loss, aggregation, blending/routing weights, TTA) with the numbers given; (3) any ablation or measured effect size, quoted; (4) what resources it attaches (datasets/weights) and what it requires to reproduce; (5) the author's own warnings or caveats; (6) your confidence that each technique is a real cause of score (SUPPORTED by an ablation / ASSERTED / UNCLEAR). Use compact bullets. Quote numbers exactly.
+
+        Your input JSON has a key "sources" mapping source names to their text. Analyse ONLY the source named `bend-the-knee-to-the-dinosaurs` and ignore the others.
+  - name: reader_rsna_knee_baseline_v1
+    type: LlmTransform
+    config:
+      model: "deepseek/deepseek-v4-flash"
+      max_tokens: 2500
+      timeout_seconds: 600
+      reasoning: {enabled: false}
+      system: |
+        You are a research analyst reading ONE source: a public Kaggle notebook from a competition on knee-MRI abnormality detection (12 findings, mean AUC). Extract, faithfully and without inventing anything: (1) the headline claim and any score it reports, with the version/evidence; (2) every concrete technique (architecture, input design, slice counts, resolution, preprocessing, label handling, loss, aggregation, blending/routing weights, TTA) with the numbers given; (3) any ablation or measured effect size, quoted; (4) what resources it attaches (datasets/weights) and what it requires to reproduce; (5) the author's own warnings or caveats; (6) your confidence that each technique is a real cause of score (SUPPORTED by an ablation / ASSERTED / UNCLEAR). Use compact bullets. Quote numbers exactly.
+
+        Your input JSON has a key "sources" mapping source names to their text. Analyse ONLY the source named `rsna-knee-baseline-v1` and ignore the others.
+  - name: reader_rsna_knee_fast_2xt4_inference
+    type: LlmTransform
+    config:
+      model: "deepseek/deepseek-v4-flash"
+      max_tokens: 2500
+      timeout_seconds: 600
+      reasoning: {enabled: false}
+      system: |
+        You are a research analyst reading ONE source: a public Kaggle notebook from a competition on knee-MRI abnormality detection (12 findings, mean AUC). Extract, faithfully and without inventing anything: (1) the headline claim and any score it reports, with the version/evidence; (2) every concrete technique (architecture, input design, slice counts, resolution, preprocessing, label handling, loss, aggregation, blending/routing weights, TTA) with the numbers given; (3) any ablation or measured effect size, quoted; (4) what resources it attaches (datasets/weights) and what it requires to reproduce; (5) the author's own warnings or caveats; (6) your confidence that each technique is a real cause of score (SUPPORTED by an ablation / ASSERTED / UNCLEAR). Use compact bullets. Quote numbers exactly.
+
+        Your input JSON has a key "sources" mapping source names to their text. Analyse ONLY the source named `rsna-knee-fast-2xt4-inference` and ignore the others.
+  - name: reader_rsna_knee_read_the_report_then_the_knee
+    type: LlmTransform
+    config:
+      model: "deepseek/deepseek-v4-flash"
+      max_tokens: 2500
+      timeout_seconds: 600
+      reasoning: {enabled: false}
+      system: |
+        You are a research analyst reading ONE source: a public Kaggle notebook from a competition on knee-MRI abnormality detection (12 findings, mean AUC). Extract, faithfully and without inventing anything: (1) the headline claim and any score it reports, with the version/evidence; (2) every concrete technique (architecture, input design, slice counts, resolution, preprocessing, label handling, loss, aggregation, blending/routing weights, TTA) with the numbers given; (3) any ablation or measured effect size, quoted; (4) what resources it attaches (datasets/weights) and what it requires to reproduce; (5) the author's own warnings or caveats; (6) your confidence that each technique is a real cause of score (SUPPORTED by an ablation / ASSERTED / UNCLEAR). Use compact bullets. Quote numbers exactly.
+
+        Your input JSON has a key "sources" mapping source names to their text. Analyse ONLY the source named `rsna-knee-read-the-report-then-the-knee` and ignore the others.
+  - name: reader_rsna_versia_5
+    type: LlmTransform
+    config:
+      model: "deepseek/deepseek-v4-flash"
+      max_tokens: 2500
+      timeout_seconds: 600
+      reasoning: {enabled: false}
+      system: |
+        You are a research analyst reading ONE source: a public Kaggle notebook from a competition on knee-MRI abnormality detection (12 findings, mean AUC). Extract, faithfully and without inventing anything: (1) the headline claim and any score it reports, with the version/evidence; (2) every concrete technique (architecture, input design, slice counts, resolution, preprocessing, label handling, loss, aggregation, blending/routing weights, TTA) with the numbers given; (3) any ablation or measured effect size, quoted; (4) what resources it attaches (datasets/weights) and what it requires to reproduce; (5) the author's own warnings or caveats; (6) your confidence that each technique is a real cause of score (SUPPORTED by an ablation / ASSERTED / UNCLEAR). Use compact bullets. Quote numbers exactly.
+
+        Your input JSON has a key "sources" mapping source names to their text. Analyse ONLY the source named `rsna-versia-5` and ignore the others.
+  - name: cross_source
+    type: LlmTransform
+    input: [reader_bend_the_knee_to_dinov3_ensembled, reader_bend_the_knee_to_the_dinosaurs, reader_rsna_knee_baseline_v1, reader_rsna_knee_fast_2xt4_inference, reader_rsna_knee_read_the_report_then_the_knee, reader_rsna_versia_5]
+    config:
+      model: "deepseek/deepseek-v4-pro"
+      max_tokens: 6000
+      timeout_seconds: 600
+      reasoning: {enabled: false}
+      system: |
+        You receive per-source analyses of public solutions to one competition. Do the research synthesis: (1) the lineage graph: which solution builds on which, so you do not double count evidence; (2) techniques that appear across independent sources vs only once; (3) which techniques have measured ablations (with numbers) vs are only asserted; (4) the score ladder and which step explains each increment; (5) contradictions between sources; (6) which resources (weights/datasets) are attached and what each contributes; (7) a ranked list of the techniques most likely responsible for the gap between ~0.87 (single-model, mid-triplet, series-pooled) and ~0.94 (large heterogeneous ensemble). Separate evidence from inference explicitly.
+  - name: radiologist
+    type: LlmTransform
+    input: [cross_source]
+    config:
+      model: "deepseek/deepseek-v4-pro"
+      max_tokens: 4000
+      timeout_seconds: 600
+      reasoning: {enabled: false}
+      system: |
+        You are a musculoskeletal radiologist who understands deep learning. Using the cross-source research and our situation, reason from knee MRI physiology: which sequences/planes/fat suppression show which of the 12 findings, what resolution/slice coverage each needs, where report-derived labels diverge from annotation thresholds, and which findings our current single-mid-triplet, series-then-pool design must lose most on. Rank the findings by expected loss vs the frontier and recommend concrete input-design changes.
+
+        OUR SITUATION AND CONSTRAINTS:
+        # Decision problem: which variants to run next on the RSNA knee task
+
+        ## Hard constraints (facts)
+        - Code competition: the SCORING rerun cannot use TPU ("Your Notebook cannot use TPU in this competition"). TPU works for ordinary training runs.
+        - Pipeline now: train on TPU (saves per-fold weights) -> weights dataset -> inference notebook on GPU/CPU loads weights, predicts hidden test. Inference averages any set of saved models.
+        - Budgets this week: TPU 16 h, GPU 30 h, CPU free. One r16-recipe training run on TPU = ~3.5 h (decode ~21 min, CoAtNet@384 ~2.3 h for 3 folds, ResNet50@224 ~1 h).
+        - Gold labels: only 58 studies. Pseudo-labels (LLM from reports): ~4,349 studies, ~22.8k-series pool. Local CV = 3 folds over the 58 gold studies (~19 val studies per fold); ALL pseudo studies are always in the training set. So CV noise is large (fold AUCs 0.848 / 0.876 / 0.909).
+        - Public score is the only trusted signal; submission count is limited per day. Local CV ranked past rounds wrongly vs public (CV->public gap +0.02..+0.03, unstable).
+
+        ## r16 recipe (the baseline being reproduced as r19, which saves weights)
+        - Members: RadImageNet ResNet50 @224 (6 epochs, lr 2e-4, 3 views=mid+-1 slices as RGB, max 6 series/pseudo study, 8/gold), raptor CoAtNet (`coatnet_rmlp_2_rw_384.sw_in12k_ft_in1k`) @384 (4 epochs, lr 1e-4 cosine, each epoch sees a random 50% of rows via BIG_FRAC=0.5, batch 16).
+        - Loss: per-element BCE with per-target pos_weight (cap 15) and per-target label-confidence weights (floor 0.15); gold and pseudo concatenated (no explicit gold upweight in the train notebook; the frozen-feature r18 used GOLD_UP=3).
+        - Study-level aggregation: per-target mean or max pooling across series, chosen on gold OOF. Flip TTA. Ensemble weights chosen on gold OOF (r16: 0.75 CoAtNet / 0.25 ResNet).
+        - Augmentation: random h-flip + ±10° rotation. Geometry fixes (slice order, mm crop, laterality) already in.
+        - r16 result: CV 0.878 (folds 0.909/0.876/0.848); CoAtNet alone 0.897/0.855/0.848; ResNet alone 0.797/0.874/0.818. Public unknown yet (not submitted).
+
+        ## Prior public results (for calibration)
+        r12 0.865 (CV 0.832, ResNet r50 @224, full pseudo pool), r13b 0.862 (CV 0.841, 2 views@256, 10 epochs), r17 0.856 (CV 0.825, frozen features heads, CPU), r8 0.815, r7 0.811 (geometry fix, +0.124 vs r6).
+
+        ## Known evidence on levers
+        - Geometry/input correctness: huge (+0.12). Pseudo-label volume 700 -> full pool: ~+0.05 (confounded). Recipe tweaks on ResNet (views, res 224->256, epochs 6->10): CV +0.009 / public -0.003 = noise. Weight averaging of last epochs: -0.01. Flip TTA ~0.
+        - Native-resolution fine-tuned CoAtNet vs frozen CoAtNet features: ~+0.04 CV. CoAtNet at wrong res (224): member AUC 0.61-0.77.
+        - CoAtNet is currently under-trained by design (4 epochs x 50% of rows = 2 effective epochs).
+        - Fold spread and the 58-gold CV mean we cannot distinguish rounds that differ by <0.02.
+
+        ## Candidate variant families (to be evaluated, not pre-decided)
+        A. Same recipe, different seeds / different fold splits; average in inference (variance reduction).
+        B. Train on ALL 58 gold + pseudo (no holdout) for the final models; use fold-run CV only for diagnostics.
+        C. Longer / fuller CoAtNet training (more epochs, BIG_FRAC=1.0), possibly larger LR schedule.
+        D. Gold upweighting (GOLD_UP) or two-stage: pretrain on pseudo, fine-tune on gold.
+        E. Label-quality: blend additional pseudo-label source (tsuyu122) after checking vs gold; drop low-confidence pseudo rows.
+        F. More/wider views per series (r13b style) for the CoAtNet; more slices (2.5D).
+        G. Use the CoAtNet frozen-feature heads (r18-style, CPU) as extra cheap ensemble members.
+        H. Build a ~500-study held-out pseudo-label validation set to make decisions measurable.
+
+
+        QUESTIONS THE PLAN MUST ANSWER: highest-value path to >0.90 and toward 0.94 (attach public weights / retrain own members / hybrid) with honest expected scores; what our own assets add as diversity; how to validate with 58 gold; how to weigh learning-the-task against raw rank (reusing public work).
+
+
+        COMPUTED FACTS (arithmetic done in code, treat as ground truth):
+        {
+         "AUC_standard_error_Hanley_McNeil (single finding)": {
+          "n=19,prev=0.1,auc=0.8": 0.197,
+          "n=19,prev=0.1,auc=0.9": 0.151,
+          "n=19,prev=0.3,auc=0.8": 0.121,
+          "n=19,prev=0.3,auc=0.9": 0.091,
+          "n=19,prev=0.5,auc=0.8": 0.104,
+          "n=19,prev=0.5,auc=0.9": 0.075,
+          "n=58,prev=0.1,auc=0.8": 0.112,
+          "n=58,prev=0.1,auc=0.9": 0.086,
+          "n=58,prev=0.3,auc=0.8": 0.07,
+          "n=58,prev=0.3,auc=0.9": 0.053,
+          "n=58,prev=0.5,auc=0.8": 0.059,
+          "n=58,prev=0.5,auc=0.9": 0.042
+         },
+         "note_on_SE": "mean over 12 findings shrinks noise by ~sqrt(12) only if findings are independent; they are not.",
+         "pixel_pitch_mm_at_130mm_crop": {
+          "224": 0.58,
+          "256": 0.508,
+          "336": 0.387,
+          "384": 0.339
+         },
+         "tear_width_1mm_needs_pitch_leq_mm": 0.5,
+         "cv_to_public_gap": {
+          "r12": 0.033,
+          "r13b": 0.021,
+          "r17": 0.031
+         },
+         "tpu_budget": {
+          "hours_available": 16,
+          "r16_recipe_hours_per_run": 3.5,
+          "full_runs_that_fit": 4
+         },
+         "gpu_budget": {
+          "hours_available": 30
+         },
+         "public_frontier": {
+          "0.937": "prvsiyan",
+          "0.940": "renta0426",
+          "0.941": "mattiaangeli",
+          "0.942": "maverickss26",
+          "0.943": "jiweiliu"
+         },
+         "our_best_public": 0.865,
+         "gap_to_frontier": 0.078
+        }
+  - name: grandmaster
+    type: LlmTransform
+    input: [cross_source]
+    config:
+      model: "deepseek/deepseek-v4-pro"
+      max_tokens: 4000
+      timeout_seconds: 600
+      reasoning: {enabled: false}
+      system: |
+        You are a Kaggle grandmaster in medical-imaging code competitions. Design the best plan to move from 0.865 toward the frontier under our constraints. Compare (a) attaching and ensembling public trained weights in a GPU inference notebook, (b) retraining our own members with slot/2.5D/dense-slice upgrades, (c) a hybrid rank-blending our own diverse members with public ones. Give honest expected public-score ranges and failure modes, the blending design that avoids overfitting to 58 gold studies, and the smallest first experiment that validates the choice.
+
+        OUR SITUATION AND CONSTRAINTS:
+        # Decision problem: which variants to run next on the RSNA knee task
+
+        ## Hard constraints (facts)
+        - Code competition: the SCORING rerun cannot use TPU ("Your Notebook cannot use TPU in this competition"). TPU works for ordinary training runs.
+        - Pipeline now: train on TPU (saves per-fold weights) -> weights dataset -> inference notebook on GPU/CPU loads weights, predicts hidden test. Inference averages any set of saved models.
+        - Budgets this week: TPU 16 h, GPU 30 h, CPU free. One r16-recipe training run on TPU = ~3.5 h (decode ~21 min, CoAtNet@384 ~2.3 h for 3 folds, ResNet50@224 ~1 h).
+        - Gold labels: only 58 studies. Pseudo-labels (LLM from reports): ~4,349 studies, ~22.8k-series pool. Local CV = 3 folds over the 58 gold studies (~19 val studies per fold); ALL pseudo studies are always in the training set. So CV noise is large (fold AUCs 0.848 / 0.876 / 0.909).
+        - Public score is the only trusted signal; submission count is limited per day. Local CV ranked past rounds wrongly vs public (CV->public gap +0.02..+0.03, unstable).
+
+        ## r16 recipe (the baseline being reproduced as r19, which saves weights)
+        - Members: RadImageNet ResNet50 @224 (6 epochs, lr 2e-4, 3 views=mid+-1 slices as RGB, max 6 series/pseudo study, 8/gold), raptor CoAtNet (`coatnet_rmlp_2_rw_384.sw_in12k_ft_in1k`) @384 (4 epochs, lr 1e-4 cosine, each epoch sees a random 50% of rows via BIG_FRAC=0.5, batch 16).
+        - Loss: per-element BCE with per-target pos_weight (cap 15) and per-target label-confidence weights (floor 0.15); gold and pseudo concatenated (no explicit gold upweight in the train notebook; the frozen-feature r18 used GOLD_UP=3).
+        - Study-level aggregation: per-target mean or max pooling across series, chosen on gold OOF. Flip TTA. Ensemble weights chosen on gold OOF (r16: 0.75 CoAtNet / 0.25 ResNet).
+        - Augmentation: random h-flip + ±10° rotation. Geometry fixes (slice order, mm crop, laterality) already in.
+        - r16 result: CV 0.878 (folds 0.909/0.876/0.848); CoAtNet alone 0.897/0.855/0.848; ResNet alone 0.797/0.874/0.818. Public unknown yet (not submitted).
+
+        ## Prior public results (for calibration)
+        r12 0.865 (CV 0.832, ResNet r50 @224, full pseudo pool), r13b 0.862 (CV 0.841, 2 views@256, 10 epochs), r17 0.856 (CV 0.825, frozen features heads, CPU), r8 0.815, r7 0.811 (geometry fix, +0.124 vs r6).
+
+        ## Known evidence on levers
+        - Geometry/input correctness: huge (+0.12). Pseudo-label volume 700 -> full pool: ~+0.05 (confounded). Recipe tweaks on ResNet (views, res 224->256, epochs 6->10): CV +0.009 / public -0.003 = noise. Weight averaging of last epochs: -0.01. Flip TTA ~0.
+        - Native-resolution fine-tuned CoAtNet vs frozen CoAtNet features: ~+0.04 CV. CoAtNet at wrong res (224): member AUC 0.61-0.77.
+        - CoAtNet is currently under-trained by design (4 epochs x 50% of rows = 2 effective epochs).
+        - Fold spread and the 58-gold CV mean we cannot distinguish rounds that differ by <0.02.
+
+        ## Candidate variant families (to be evaluated, not pre-decided)
+        A. Same recipe, different seeds / different fold splits; average in inference (variance reduction).
+        B. Train on ALL 58 gold + pseudo (no holdout) for the final models; use fold-run CV only for diagnostics.
+        C. Longer / fuller CoAtNet training (more epochs, BIG_FRAC=1.0), possibly larger LR schedule.
+        D. Gold upweighting (GOLD_UP) or two-stage: pretrain on pseudo, fine-tune on gold.
+        E. Label-quality: blend additional pseudo-label source (tsuyu122) after checking vs gold; drop low-confidence pseudo rows.
+        F. More/wider views per series (r13b style) for the CoAtNet; more slices (2.5D).
+        G. Use the CoAtNet frozen-feature heads (r18-style, CPU) as extra cheap ensemble members.
+        H. Build a ~500-study held-out pseudo-label validation set to make decisions measurable.
+
+
+        QUESTIONS THE PLAN MUST ANSWER: highest-value path to >0.90 and toward 0.94 (attach public weights / retrain own members / hybrid) with honest expected scores; what our own assets add as diversity; how to validate with 58 gold; how to weigh learning-the-task against raw rank (reusing public work).
+
+
+        COMPUTED FACTS (arithmetic done in code, treat as ground truth):
+        {
+         "AUC_standard_error_Hanley_McNeil (single finding)": {
+          "n=19,prev=0.1,auc=0.8": 0.197,
+          "n=19,prev=0.1,auc=0.9": 0.151,
+          "n=19,prev=0.3,auc=0.8": 0.121,
+          "n=19,prev=0.3,auc=0.9": 0.091,
+          "n=19,prev=0.5,auc=0.8": 0.104,
+          "n=19,prev=0.5,auc=0.9": 0.075,
+          "n=58,prev=0.1,auc=0.8": 0.112,
+          "n=58,prev=0.1,auc=0.9": 0.086,
+          "n=58,prev=0.3,auc=0.8": 0.07,
+          "n=58,prev=0.3,auc=0.9": 0.053,
+          "n=58,prev=0.5,auc=0.8": 0.059,
+          "n=58,prev=0.5,auc=0.9": 0.042
+         },
+         "note_on_SE": "mean over 12 findings shrinks noise by ~sqrt(12) only if findings are independent; they are not.",
+         "pixel_pitch_mm_at_130mm_crop": {
+          "224": 0.58,
+          "256": 0.508,
+          "336": 0.387,
+          "384": 0.339
+         },
+         "tear_width_1mm_needs_pitch_leq_mm": 0.5,
+         "cv_to_public_gap": {
+          "r12": 0.033,
+          "r13b": 0.021,
+          "r17": 0.031
+         },
+         "tpu_budget": {
+          "hours_available": 16,
+          "r16_recipe_hours_per_run": 3.5,
+          "full_runs_that_fit": 4
+         },
+         "gpu_budget": {
+          "hours_available": 30
+         },
+         "public_frontier": {
+          "0.937": "prvsiyan",
+          "0.940": "renta0426",
+          "0.941": "mattiaangeli",
+          "0.942": "maverickss26",
+          "0.943": "jiweiliu"
+         },
+         "our_best_public": 0.865,
+         "gap_to_frontier": 0.078
+        }
+  - name: statistician
+    type: LlmTransform
+    input: [cross_source]
+    config:
+      model: "deepseek/deepseek-v4-pro"
+      max_tokens: 4000
+      timeout_seconds: 600
+      reasoning: {enabled: false}
+      system: |
+        You are a statistician and compute planner. Using the computed facts (they are correct), state what 58 gold studies can and cannot resolve, design the validation protocol (report-hash grouped splits, repeated partitions, nested blend weights; which decisions may use gold), do the TPU/GPU/CPU budget arithmetic for each candidate plan showing your work, and say which public-LB signals are trustworthy given the daily submission limit.
+
+        OUR SITUATION AND CONSTRAINTS:
+        # Decision problem: which variants to run next on the RSNA knee task
+
+        ## Hard constraints (facts)
+        - Code competition: the SCORING rerun cannot use TPU ("Your Notebook cannot use TPU in this competition"). TPU works for ordinary training runs.
+        - Pipeline now: train on TPU (saves per-fold weights) -> weights dataset -> inference notebook on GPU/CPU loads weights, predicts hidden test. Inference averages any set of saved models.
+        - Budgets this week: TPU 16 h, GPU 30 h, CPU free. One r16-recipe training run on TPU = ~3.5 h (decode ~21 min, CoAtNet@384 ~2.3 h for 3 folds, ResNet50@224 ~1 h).
+        - Gold labels: only 58 studies. Pseudo-labels (LLM from reports): ~4,349 studies, ~22.8k-series pool. Local CV = 3 folds over the 58 gold studies (~19 val studies per fold); ALL pseudo studies are always in the training set. So CV noise is large (fold AUCs 0.848 / 0.876 / 0.909).
+        - Public score is the only trusted signal; submission count is limited per day. Local CV ranked past rounds wrongly vs public (CV->public gap +0.02..+0.03, unstable).
+
+        ## r16 recipe (the baseline being reproduced as r19, which saves weights)
+        - Members: RadImageNet ResNet50 @224 (6 epochs, lr 2e-4, 3 views=mid+-1 slices as RGB, max 6 series/pseudo study, 8/gold), raptor CoAtNet (`coatnet_rmlp_2_rw_384.sw_in12k_ft_in1k`) @384 (4 epochs, lr 1e-4 cosine, each epoch sees a random 50% of rows via BIG_FRAC=0.5, batch 16).
+        - Loss: per-element BCE with per-target pos_weight (cap 15) and per-target label-confidence weights (floor 0.15); gold and pseudo concatenated (no explicit gold upweight in the train notebook; the frozen-feature r18 used GOLD_UP=3).
+        - Study-level aggregation: per-target mean or max pooling across series, chosen on gold OOF. Flip TTA. Ensemble weights chosen on gold OOF (r16: 0.75 CoAtNet / 0.25 ResNet).
+        - Augmentation: random h-flip + ±10° rotation. Geometry fixes (slice order, mm crop, laterality) already in.
+        - r16 result: CV 0.878 (folds 0.909/0.876/0.848); CoAtNet alone 0.897/0.855/0.848; ResNet alone 0.797/0.874/0.818. Public unknown yet (not submitted).
+
+        ## Prior public results (for calibration)
+        r12 0.865 (CV 0.832, ResNet r50 @224, full pseudo pool), r13b 0.862 (CV 0.841, 2 views@256, 10 epochs), r17 0.856 (CV 0.825, frozen features heads, CPU), r8 0.815, r7 0.811 (geometry fix, +0.124 vs r6).
+
+        ## Known evidence on levers
+        - Geometry/input correctness: huge (+0.12). Pseudo-label volume 700 -> full pool: ~+0.05 (confounded). Recipe tweaks on ResNet (views, res 224->256, epochs 6->10): CV +0.009 / public -0.003 = noise. Weight averaging of last epochs: -0.01. Flip TTA ~0.
+        - Native-resolution fine-tuned CoAtNet vs frozen CoAtNet features: ~+0.04 CV. CoAtNet at wrong res (224): member AUC 0.61-0.77.
+        - CoAtNet is currently under-trained by design (4 epochs x 50% of rows = 2 effective epochs).
+        - Fold spread and the 58-gold CV mean we cannot distinguish rounds that differ by <0.02.
+
+        ## Candidate variant families (to be evaluated, not pre-decided)
+        A. Same recipe, different seeds / different fold splits; average in inference (variance reduction).
+        B. Train on ALL 58 gold + pseudo (no holdout) for the final models; use fold-run CV only for diagnostics.
+        C. Longer / fuller CoAtNet training (more epochs, BIG_FRAC=1.0), possibly larger LR schedule.
+        D. Gold upweighting (GOLD_UP) or two-stage: pretrain on pseudo, fine-tune on gold.
+        E. Label-quality: blend additional pseudo-label source (tsuyu122) after checking vs gold; drop low-confidence pseudo rows.
+        F. More/wider views per series (r13b style) for the CoAtNet; more slices (2.5D).
+        G. Use the CoAtNet frozen-feature heads (r18-style, CPU) as extra cheap ensemble members.
+        H. Build a ~500-study held-out pseudo-label validation set to make decisions measurable.
+
+
+        QUESTIONS THE PLAN MUST ANSWER: highest-value path to >0.90 and toward 0.94 (attach public weights / retrain own members / hybrid) with honest expected scores; what our own assets add as diversity; how to validate with 58 gold; how to weigh learning-the-task against raw rank (reusing public work).
+
+
+        COMPUTED FACTS (arithmetic done in code, treat as ground truth):
+        {
+         "AUC_standard_error_Hanley_McNeil (single finding)": {
+          "n=19,prev=0.1,auc=0.8": 0.197,
+          "n=19,prev=0.1,auc=0.9": 0.151,
+          "n=19,prev=0.3,auc=0.8": 0.121,
+          "n=19,prev=0.3,auc=0.9": 0.091,
+          "n=19,prev=0.5,auc=0.8": 0.104,
+          "n=19,prev=0.5,auc=0.9": 0.075,
+          "n=58,prev=0.1,auc=0.8": 0.112,
+          "n=58,prev=0.1,auc=0.9": 0.086,
+          "n=58,prev=0.3,auc=0.8": 0.07,
+          "n=58,prev=0.3,auc=0.9": 0.053,
+          "n=58,prev=0.5,auc=0.8": 0.059,
+          "n=58,prev=0.5,auc=0.9": 0.042
+         },
+         "note_on_SE": "mean over 12 findings shrinks noise by ~sqrt(12) only if findings are independent; they are not.",
+         "pixel_pitch_mm_at_130mm_crop": {
+          "224": 0.58,
+          "256": 0.508,
+          "336": 0.387,
+          "384": 0.339
+         },
+         "tear_width_1mm_needs_pitch_leq_mm": 0.5,
+         "cv_to_public_gap": {
+          "r12": 0.033,
+          "r13b": 0.021,
+          "r17": 0.031
+         },
+         "tpu_budget": {
+          "hours_available": 16,
+          "r16_recipe_hours_per_run": 3.5,
+          "full_runs_that_fit": 4
+         },
+         "gpu_budget": {
+          "hours_available": 30
+         },
+         "public_frontier": {
+          "0.937": "prvsiyan",
+          "0.940": "renta0426",
+          "0.941": "mattiaangeli",
+          "0.942": "maverickss26",
+          "0.943": "jiweiliu"
+         },
+         "our_best_public": 0.865,
+         "gap_to_frontier": 0.078
+        }
+  - name: red_team
+    type: LlmTransform
+    input: [cross_source, radiologist, grandmaster, statistician]
+    config:
+      model: "deepseek/deepseek-v4-pro"
+      max_tokens: 3500
+      timeout_seconds: 600
+      reasoning: {enabled: false}
+      system: |
+        Attack the three expert drafts using the cross-source research as the evidence base: unsupported claims, budget arithmetic errors (recompute them), plans that rely on gold-label post-selection, contradictions, public-LB overfitting risk, and integrity/compliance concerns about reusing public work. Quote the claim, say why it fails, say what repairs it. End with the single biggest blind spot.
+
+        OUR SITUATION AND CONSTRAINTS:
+        # Decision problem: which variants to run next on the RSNA knee task
+
+        ## Hard constraints (facts)
+        - Code competition: the SCORING rerun cannot use TPU ("Your Notebook cannot use TPU in this competition"). TPU works for ordinary training runs.
+        - Pipeline now: train on TPU (saves per-fold weights) -> weights dataset -> inference notebook on GPU/CPU loads weights, predicts hidden test. Inference averages any set of saved models.
+        - Budgets this week: TPU 16 h, GPU 30 h, CPU free. One r16-recipe training run on TPU = ~3.5 h (decode ~21 min, CoAtNet@384 ~2.3 h for 3 folds, ResNet50@224 ~1 h).
+        - Gold labels: only 58 studies. Pseudo-labels (LLM from reports): ~4,349 studies, ~22.8k-series pool. Local CV = 3 folds over the 58 gold studies (~19 val studies per fold); ALL pseudo studies are always in the training set. So CV noise is large (fold AUCs 0.848 / 0.876 / 0.909).
+        - Public score is the only trusted signal; submission count is limited per day. Local CV ranked past rounds wrongly vs public (CV->public gap +0.02..+0.03, unstable).
+
+        ## r16 recipe (the baseline being reproduced as r19, which saves weights)
+        - Members: RadImageNet ResNet50 @224 (6 epochs, lr 2e-4, 3 views=mid+-1 slices as RGB, max 6 series/pseudo study, 8/gold), raptor CoAtNet (`coatnet_rmlp_2_rw_384.sw_in12k_ft_in1k`) @384 (4 epochs, lr 1e-4 cosine, each epoch sees a random 50% of rows via BIG_FRAC=0.5, batch 16).
+        - Loss: per-element BCE with per-target pos_weight (cap 15) and per-target label-confidence weights (floor 0.15); gold and pseudo concatenated (no explicit gold upweight in the train notebook; the frozen-feature r18 used GOLD_UP=3).
+        - Study-level aggregation: per-target mean or max pooling across series, chosen on gold OOF. Flip TTA. Ensemble weights chosen on gold OOF (r16: 0.75 CoAtNet / 0.25 ResNet).
+        - Augmentation: random h-flip + ±10° rotation. Geometry fixes (slice order, mm crop, laterality) already in.
+        - r16 result: CV 0.878 (folds 0.909/0.876/0.848); CoAtNet alone 0.897/0.855/0.848; ResNet alone 0.797/0.874/0.818. Public unknown yet (not submitted).
+
+        ## Prior public results (for calibration)
+        r12 0.865 (CV 0.832, ResNet r50 @224, full pseudo pool), r13b 0.862 (CV 0.841, 2 views@256, 10 epochs), r17 0.856 (CV 0.825, frozen features heads, CPU), r8 0.815, r7 0.811 (geometry fix, +0.124 vs r6).
+
+        ## Known evidence on levers
+        - Geometry/input correctness: huge (+0.12). Pseudo-label volume 700 -> full pool: ~+0.05 (confounded). Recipe tweaks on ResNet (views, res 224->256, epochs 6->10): CV +0.009 / public -0.003 = noise. Weight averaging of last epochs: -0.01. Flip TTA ~0.
+        - Native-resolution fine-tuned CoAtNet vs frozen CoAtNet features: ~+0.04 CV. CoAtNet at wrong res (224): member AUC 0.61-0.77.
+        - CoAtNet is currently under-trained by design (4 epochs x 50% of rows = 2 effective epochs).
+        - Fold spread and the 58-gold CV mean we cannot distinguish rounds that differ by <0.02.
+
+        ## Candidate variant families (to be evaluated, not pre-decided)
+        A. Same recipe, different seeds / different fold splits; average in inference (variance reduction).
+        B. Train on ALL 58 gold + pseudo (no holdout) for the final models; use fold-run CV only for diagnostics.
+        C. Longer / fuller CoAtNet training (more epochs, BIG_FRAC=1.0), possibly larger LR schedule.
+        D. Gold upweighting (GOLD_UP) or two-stage: pretrain on pseudo, fine-tune on gold.
+        E. Label-quality: blend additional pseudo-label source (tsuyu122) after checking vs gold; drop low-confidence pseudo rows.
+        F. More/wider views per series (r13b style) for the CoAtNet; more slices (2.5D).
+        G. Use the CoAtNet frozen-feature heads (r18-style, CPU) as extra cheap ensemble members.
+        H. Build a ~500-study held-out pseudo-label validation set to make decisions measurable.
+
+
+        QUESTIONS THE PLAN MUST ANSWER: highest-value path to >0.90 and toward 0.94 (attach public weights / retrain own members / hybrid) with honest expected scores; what our own assets add as diversity; how to validate with 58 gold; how to weigh learning-the-task against raw rank (reusing public work).
+
+
+        COMPUTED FACTS (arithmetic done in code, treat as ground truth):
+        {
+         "AUC_standard_error_Hanley_McNeil (single finding)": {
+          "n=19,prev=0.1,auc=0.8": 0.197,
+          "n=19,prev=0.1,auc=0.9": 0.151,
+          "n=19,prev=0.3,auc=0.8": 0.121,
+          "n=19,prev=0.3,auc=0.9": 0.091,
+          "n=19,prev=0.5,auc=0.8": 0.104,
+          "n=19,prev=0.5,auc=0.9": 0.075,
+          "n=58,prev=0.1,auc=0.8": 0.112,
+          "n=58,prev=0.1,auc=0.9": 0.086,
+          "n=58,prev=0.3,auc=0.8": 0.07,
+          "n=58,prev=0.3,auc=0.9": 0.053,
+          "n=58,prev=0.5,auc=0.8": 0.059,
+          "n=58,prev=0.5,auc=0.9": 0.042
+         },
+         "note_on_SE": "mean over 12 findings shrinks noise by ~sqrt(12) only if findings are independent; they are not.",
+         "pixel_pitch_mm_at_130mm_crop": {
+          "224": 0.58,
+          "256": 0.508,
+          "336": 0.387,
+          "384": 0.339
+         },
+         "tear_width_1mm_needs_pitch_leq_mm": 0.5,
+         "cv_to_public_gap": {
+          "r12": 0.033,
+          "r13b": 0.021,
+          "r17": 0.031
+         },
+         "tpu_budget": {
+          "hours_available": 16,
+          "r16_recipe_hours_per_run": 3.5,
+          "full_runs_that_fit": 4
+         },
+         "gpu_budget": {
+          "hours_available": 30
+         },
+         "public_frontier": {
+          "0.937": "prvsiyan",
+          "0.940": "renta0426",
+          "0.941": "mattiaangeli",
+          "0.942": "maverickss26",
+          "0.943": "jiweiliu"
+         },
+         "our_best_public": 0.865,
+         "gap_to_frontier": 0.078
+        }
+  - name: synthesizer
+    type: LlmTransform
+    input: [cross_source, radiologist, grandmaster, statistician, red_team]
+    config:
+      model: "deepseek/deepseek-v4-pro"
+      max_tokens: 14000
+      timeout_seconds: 600
+      reasoning: {enabled: false}
+      system: |
+        Write the decision document "What to run next to win" in markdown, executive style (bullets, tables, no walls of text). Use only what survived the red team. Sections: 1. Verdict (3 bullets: recommended path, expected public score range with honest uncertainty). 2. Why we are at 0.865 and the frontier is at ~0.94 (4-5 real causes, ranked, each marked SUPPORTED/ASSERTED). 3. Plan: ordered steps with hardware, hours, and a kill criterion each; step 1 runnable this week. 4. Validation protocol; which decisions may use gold labels. 5. Per-finding targets. 6. Integrity note: what is reused from public work (attribute authors) and what is our own contribution. 7. Risks and what we will not do. 8. What new research to do next (open questions). Every quantitative claim names its source or shows arithmetic.
+
+        OUR SITUATION AND CONSTRAINTS:
+        # Decision problem: which variants to run next on the RSNA knee task
+
+        ## Hard constraints (facts)
+        - Code competition: the SCORING rerun cannot use TPU ("Your Notebook cannot use TPU in this competition"). TPU works for ordinary training runs.
+        - Pipeline now: train on TPU (saves per-fold weights) -> weights dataset -> inference notebook on GPU/CPU loads weights, predicts hidden test. Inference averages any set of saved models.
+        - Budgets this week: TPU 16 h, GPU 30 h, CPU free. One r16-recipe training run on TPU = ~3.5 h (decode ~21 min, CoAtNet@384 ~2.3 h for 3 folds, ResNet50@224 ~1 h).
+        - Gold labels: only 58 studies. Pseudo-labels (LLM from reports): ~4,349 studies, ~22.8k-series pool. Local CV = 3 folds over the 58 gold studies (~19 val studies per fold); ALL pseudo studies are always in the training set. So CV noise is large (fold AUCs 0.848 / 0.876 / 0.909).
+        - Public score is the only trusted signal; submission count is limited per day. Local CV ranked past rounds wrongly vs public (CV->public gap +0.02..+0.03, unstable).
+
+        ## r16 recipe (the baseline being reproduced as r19, which saves weights)
+        - Members: RadImageNet ResNet50 @224 (6 epochs, lr 2e-4, 3 views=mid+-1 slices as RGB, max 6 series/pseudo study, 8/gold), raptor CoAtNet (`coatnet_rmlp_2_rw_384.sw_in12k_ft_in1k`) @384 (4 epochs, lr 1e-4 cosine, each epoch sees a random 50% of rows via BIG_FRAC=0.5, batch 16).
+        - Loss: per-element BCE with per-target pos_weight (cap 15) and per-target label-confidence weights (floor 0.15); gold and pseudo concatenated (no explicit gold upweight in the train notebook; the frozen-feature r18 used GOLD_UP=3).
+        - Study-level aggregation: per-target mean or max pooling across series, chosen on gold OOF. Flip TTA. Ensemble weights chosen on gold OOF (r16: 0.75 CoAtNet / 0.25 ResNet).
+        - Augmentation: random h-flip + ±10° rotation. Geometry fixes (slice order, mm crop, laterality) already in.
+        - r16 result: CV 0.878 (folds 0.909/0.876/0.848); CoAtNet alone 0.897/0.855/0.848; ResNet alone 0.797/0.874/0.818. Public unknown yet (not submitted).
+
+        ## Prior public results (for calibration)
+        r12 0.865 (CV 0.832, ResNet r50 @224, full pseudo pool), r13b 0.862 (CV 0.841, 2 views@256, 10 epochs), r17 0.856 (CV 0.825, frozen features heads, CPU), r8 0.815, r7 0.811 (geometry fix, +0.124 vs r6).
+
+        ## Known evidence on levers
+        - Geometry/input correctness: huge (+0.12). Pseudo-label volume 700 -> full pool: ~+0.05 (confounded). Recipe tweaks on ResNet (views, res 224->256, epochs 6->10): CV +0.009 / public -0.003 = noise. Weight averaging of last epochs: -0.01. Flip TTA ~0.
+        - Native-resolution fine-tuned CoAtNet vs frozen CoAtNet features: ~+0.04 CV. CoAtNet at wrong res (224): member AUC 0.61-0.77.
+        - CoAtNet is currently under-trained by design (4 epochs x 50% of rows = 2 effective epochs).
+        - Fold spread and the 58-gold CV mean we cannot distinguish rounds that differ by <0.02.
+
+        ## Candidate variant families (to be evaluated, not pre-decided)
+        A. Same recipe, different seeds / different fold splits; average in inference (variance reduction).
+        B. Train on ALL 58 gold + pseudo (no holdout) for the final models; use fold-run CV only for diagnostics.
+        C. Longer / fuller CoAtNet training (more epochs, BIG_FRAC=1.0), possibly larger LR schedule.
+        D. Gold upweighting (GOLD_UP) or two-stage: pretrain on pseudo, fine-tune on gold.
+        E. Label-quality: blend additional pseudo-label source (tsuyu122) after checking vs gold; drop low-confidence pseudo rows.
+        F. More/wider views per series (r13b style) for the CoAtNet; more slices (2.5D).
+        G. Use the CoAtNet frozen-feature heads (r18-style, CPU) as extra cheap ensemble members.
+        H. Build a ~500-study held-out pseudo-label validation set to make decisions measurable.
+
+
+        QUESTIONS THE PLAN MUST ANSWER: highest-value path to >0.90 and toward 0.94 (attach public weights / retrain own members / hybrid) with honest expected scores; what our own assets add as diversity; how to validate with 58 gold; how to weigh learning-the-task against raw rank (reusing public work).
+
+
+        COMPUTED FACTS (arithmetic done in code, treat as ground truth):
+        {
+         "AUC_standard_error_Hanley_McNeil (single finding)": {
+          "n=19,prev=0.1,auc=0.8": 0.197,
+          "n=19,prev=0.1,auc=0.9": 0.151,
+          "n=19,prev=0.3,auc=0.8": 0.121,
+          "n=19,prev=0.3,auc=0.9": 0.091,
+          "n=19,prev=0.5,auc=0.8": 0.104,
+          "n=19,prev=0.5,auc=0.9": 0.075,
+          "n=58,prev=0.1,auc=0.8": 0.112,
+          "n=58,prev=0.1,auc=0.9": 0.086,
+          "n=58,prev=0.3,auc=0.8": 0.07,
+          "n=58,prev=0.3,auc=0.9": 0.053,
+          "n=58,prev=0.5,auc=0.8": 0.059,
+          "n=58,prev=0.5,auc=0.9": 0.042
+         },
+         "note_on_SE": "mean over 12 findings shrinks noise by ~sqrt(12) only if findings are independent; they are not.",
+         "pixel_pitch_mm_at_130mm_crop": {
+          "224": 0.58,
+          "256": 0.508,
+          "336": 0.387,
+          "384": 0.339
+         },
+         "tear_width_1mm_needs_pitch_leq_mm": 0.5,
+         "cv_to_public_gap": {
+          "r12": 0.033,
+          "r13b": 0.021,
+          "r17": 0.031
+         },
+         "tpu_budget": {
+          "hours_available": 16,
+          "r16_recipe_hours_per_run": 3.5,
+          "full_runs_that_fit": 4
+         },
+         "gpu_budget": {
+          "hours_available": 30
+         },
+         "public_frontier": {
+          "0.937": "prvsiyan",
+          "0.940": "renta0426",
+          "0.941": "mattiaangeli",
+          "0.942": "maverickss26",
+          "0.943": "jiweiliu"
+         },
+         "our_best_public": 0.865,
+         "gap_to_frontier": 0.078
+        }
+
+budget:
+  max_usd: 4.00
+  max_wallclock_seconds: 2400
