@@ -1,0 +1,6 @@
+{
+ "objects": {
+  "phi": "exp(x)*cos(y)"
+ },
+ "derivation_notes": "Re exp(x+iy) is harmonic"
+}

@@ -42,6 +42,11 @@ _FULL = {
 def _fast(monkeypatch):
     monkeypatch.setattr(local_pipeline, "_POLL_INTERVAL_SECONDS", 0)
     monkeypatch.setattr(iota_trace_transform, "_run_sandbox", fake_sandbox)
+    from moonstar_physics import construct_residuals
+    from moonstar_physics.construct_spec import load_construct_spec as _load       # in-process, no child process / simplify in tests
+    monkeypatch.setattr(construct_pipeline, "diagnose_with_timeout",
+                        lambda spec_path, cand, failed: construct_residuals.diagnose_gate_failures(
+                            _load(spec_path), cand, failed, symbolic=False))
 
 
 def _gateway(script: dict[str, list[str]], seen: list[dict], fail: dict[str, set[int]] | None = None,
@@ -289,3 +294,125 @@ async def test_no_reported_cost_falls_back_to_the_estimate_and_is_flagged():
     result = await _run(_FULL, seen)
     assert result["cost_is_exact"] is False and result["cost_reported_usd"] == 0.0
     assert result["cost_estimated_usd"] == pytest.approx(result["cost_usd"]) and result["cost_usd"] > 0
+
+
+async def test_feedback_carries_over_met_criteria_and_names_regressions():
+    # round 1: A is PARTIAL (meets some gates); round 2: both candidates regress to NOT_FOUND.
+    script = {**_FULL, "Generator_A": [_PARTIAL, _BAD, _BAD], "Generator_B": [_BAD]}
+    seen: list[dict] = []
+    result = await _run(script, seen, max_rounds=3)
+    fb2 = _req(seen, "Derive_A", call=2)["feedback"]
+    assert fb2["must_still_pass"] and "div_free" in fb2["must_still_pass"]
+    assert set(fb2["must_fix"]) == set(fb2["unmet_hard"]) | set(fb2["unverified_hard"])
+    assert fb2["regressions"] == {}                                    # nothing to regress from yet
+    fb3 = _req(seen, "Derive_A", call=3)["feedback"]
+    assert fb3["from_round"] == 1 and fb3["must_still_pass"] == fb2["must_still_pass"]   # anchor stays the best ever
+    assert fb3["regressions"]["A"]                                     # round 2's A lost criteria the anchor met
+    assert set(fb3["regressions"]["A"]) <= set(fb2["must_still_pass"])
+    r2 = [h for h in result["rounds"] if h["round"] == 2][0]
+    assert r2["verdict"] == "NOT_FOUND"
+
+
+def test_cand_score_prefers_more_hard_criteria_met_over_fewer_unmet():
+    from moonstar_physics.construct_pipeline import _cand_score
+    a = {"hard_met": ["a", "b", "c"], "unmet_hard": ["x"]}
+    b = {"hard_met": ["a"], "unmet_hard": ["x"]}
+    assert _cand_score("PARTIAL", a, 1) > _cand_score("PARTIAL", b, 2)
+    assert _cand_score("CONSTRUCTED", b, 1) > _cand_score("PARTIAL", a, 2)
+
+
+def test_planner_and_derive_prompts_carry_the_p42_rules():
+    text = _PIPELINE.read_text(encoding="utf-8")
+    for needle in ("EXPLOITS", "EXPLORES", "must_still_pass", "regressions", "Never drop a hard criterion"):
+        assert needle in text
+
+
+async def test_failed_gate_diagnostics_reach_the_next_derive_but_not_the_planner():
+    script = {**_FULL, "Generator_A": [_BAD, _BAD], "Generator_B": [_BAD]}
+    seen: list[dict] = []
+    await _run(script, seen, max_rounds=2)
+    fb = _req(seen, "Derive_A", call=2)["feedback"]
+    diag = fb["residual_diagnostics"]
+    assert "force_balance" in diag and "residual_at_points" in diag["force_balance"]
+    hist = _req(seen, "Planner", call=2)["history"]
+    assert all("diagnostics" not in c for c in hist[0]["candidates"].values())
+
+
+async def test_candidates_per_round_runs_k_candidates_with_distinct_labels_and_two_at_a_time():
+    plan = json.dumps({f"generator_{l}": {"mechanism": f"m{l}", "ansatz": "a"} for l in "abcd"} | {"target": "t"})
+    script = {**_FULL, "Planner": [plan], "Generator_A": [_BAD], "Generator_C": [_IOTA2], "Generator_D": [_BAD],
+              "Derive_C": ["derivation C"], "Derive_D": ["derivation D"]}
+    seen: list[dict] = []
+    result = await run_construct(_SPEC, "http://gateway.test", "tok", _PIPELINE, _MODELS,
+                                 transport=_gateway(script, seen), max_rounds=1, candidates_per_round=4)
+    assert result["verdict"] == "CONSTRUCTED" and result["best_candidate"] == "C"
+    assert _req(seen, "Planner")["candidates"] == 4
+    for l in "ABCD":
+        assert _req(seen, f"Derive_{l}")["assignment"]["mechanism"] == f"m{l.lower()}"
+    by = _by_name(result["artifacts"])
+    assert {f"criteria_{l}" for l in "abcd"} <= set(by) and by["criteria_c"]["verdict"] == "CONSTRUCTED"
+    names = _names(seen)
+    # concurrency cap: with two slots, candidates C/D cannot start deriving before A or B finished generating
+    assert names.index("Derive_C") > min(names.index("Generator_A"), names.index("Generator_B"))
+
+
+async def test_planner_gap_falls_back_to_hints_for_unassigned_candidates():
+    script = {**_FULL, "Planner": [_PLAN], "Derive_C": ["derivation C"], "Generator_C": [_BAD]}   # planner assigns only a and b
+    seen: list[dict] = []
+    result = await run_construct(_SPEC, "http://gateway.test", "tok", _PIPELINE, _MODELS,
+                                 transport=_gateway(script, seen), max_rounds=1, candidates_per_round=3)
+    assert result["status"] == "completed"
+    assert _req(seen, "Derive_C")["assignment"]["mechanism"]            # filled from the spec's mechanism hints
+    assert _by_name(result["artifacts"])["Planner"]["planner_fallback"] is True
+
+
+async def test_candidates_per_round_is_validated():
+    with pytest.raises(ValueError):
+        await run_construct(_SPEC, "http://gateway.test", "tok", _PIPELINE, _MODELS, candidates_per_round=7)
+
+
+async def test_repair_model_is_used_for_derive_only_in_repair_rounds(tmp_path):
+    models = json.loads(_MODELS.read_text(encoding="utf-8")) | {"MODEL_REPAIR": "deepseek/deepseek-v4-pro-REPAIR"}
+    mp = tmp_path / "models.json"
+    mp.write_text(json.dumps(models), encoding="utf-8")
+    script = {**_FULL, "Generator_A": [_BAD, _IOTA2], "Generator_B": [_BAD]}
+    used: list[tuple[str, str]] = []
+    base = _gateway(script, [])
+
+    def spy(request: httpx.Request) -> httpx.Response:
+        if request.url.path == "/pipelines/run":
+            spec = yaml.safe_load(json.loads(request.content)["yaml_spec"])["transforms"][0]
+            used.append((spec["name"], spec["config"].get("model")))
+        return base.handler(request)
+
+    await run_construct(_SPEC, "http://gateway.test", "tok", _PIPELINE, mp,
+                        transport=httpx.MockTransport(spy), max_rounds=3)
+    derive = [m for n, m in used if n == "Derive_A"]
+    assert derive[0] != "deepseek/deepseek-v4-pro-REPAIR" and derive[1] == "deepseek/deepseek-v4-pro-REPAIR"
+
+
+async def test_beltrami_spec_runs_end_to_end_with_no_psi_and_no_iota():
+    spec = _ROOT / "constructs" / "beltrami-force-free.yaml"
+    abc = json.dumps({"objects": {"B": ["sin(z)+cos(y)", "sin(x)+cos(z)", "sin(y)+cos(x)"]}, "params": {"lam": 1.0}})
+    script = {**_FULL, "Generator_A": [abc], "Generator_B": [_BAD]}
+    seen: list[dict] = []
+    result = await run_construct(spec, "http://gateway.test", "tok", _PIPELINE, _MODELS,
+                                 transport=_gateway(script, seen), max_rounds=1)
+    assert result["verdict"] == "CONSTRUCTED" and result["best_candidate"] == "A"
+    assert "IotaTrace" not in " ".join(_names(seen))
+
+
+async def test_result_names_the_best_candidate_by_family_with_structural_tags():
+    seen: list[dict] = []
+    result = await _run(_FULL, seen)
+    fam = result["best_family"]
+    assert fam["mechanism"] == "axis torsion"                    # planner's mechanism for candidate A
+    assert "non-axisymmetric" in fam["tags"] and "uses-free-parameter" in fam["tags"]   # iota=2 field
+    assert "z-independent" not in fam["tags"]
+
+
+def test_family_tags_flag_axisymmetric_and_z_independent_candidates():
+    from moonstar_physics.construct_diagnose import family_tags
+    cyl = json.loads(_PARTIAL)                                    # B = (-y, x, 0): rotation-symmetric, z-free
+    tags = family_tags(_SPEC, cyl)
+    assert "axisymmetric" in tags and "z-independent" in tags

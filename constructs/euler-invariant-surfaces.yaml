@@ -1,0 +1,34 @@
+slug: euler-invariant-surfaces
+title: Steady incompressible Euler flow with invariant surfaces
+statement: >
+  Find an explicit, non-trivial steady incompressible Euler flow in R^3: a
+  velocity field u (div u = 0), a pressure p, with (u . grad) u = -grad p
+  (constant density 1), together with a scalar function f whose level sets
+  are invariant surfaces of the flow (u . grad f = 0) and f is not constant.
+  The flow must have non-zero vorticity (uniform flow does not count).
+  Give u as three closed-form expressions and p, f as closed-form
+  expressions in Cartesian (x, y, z). Genuinely three-dimensional flows are
+  preferred but not required.
+unknowns:
+  - {name: u, kind: vector_field, vars: [x, y, z]}
+  - {name: p, kind: scalar_field, vars: [x, y, z]}
+  - {name: f, kind: scalar_field, vars: [x, y, z]}
+criteria:
+  hard:
+    - {id: div_free,      check: divergence_zero, expr: "div(u)"}
+    - {id: euler,         check: identity_zero,   expr: "grad(p + 0.5*dot(u, u)) + cross(curl(u), u)", note: "Bernoulli form of (u.grad)u = -grad p"}
+    - {id: invariant,     check: identity_zero,   expr: "dot(u, grad(f))"}
+    - {id: f_nonconstant, check: numeric_sample,  kind: nonconstant, target: f}
+    - {id: u_nonzero,     check: numeric_sample,  kind: nonzero, target: u}
+    - {id: vorticity_nonzero, check: numeric_sample, kind: nonzero, target: "curl(u)"}
+  soft:
+    - {id: novel, check: manual, note: "human literature check"}
+mechanism_hints:
+  - Beltrami (curl u = lambda u) flows, for which the Lamb vector vanishes
+  - flows depending on a stream function with vorticity a function of it
+  - axisymmetric swirl with a poloidal stream function
+sample_box:
+  x: [-3.0, 3.0]
+  y: [-3.0, 3.0]
+  z: [-3.0, 3.0]
+budget: {max_usd: 3.00, max_wallclock_seconds: 5400, max_rounds: 4}

@@ -1,0 +1,12 @@
+{
+ "objects": {
+  "u": [
+   "sin(x)*cos(y)",
+   "-cos(x)*sin(y)",
+   "0"
+  ],
+  "p": "0.25*(cos(2*x)+cos(2*y))",
+  "f": "sin(x)*sin(y)"
+ },
+ "derivation_notes": "Taylor-Green cell: psi=sin x sin y, omega=2 psi; steady 2D Euler, invariant surfaces psi=const."
+}

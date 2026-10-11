@@ -1,6 +1,8 @@
 # Labelled adversarial corpus: what a CORRECT checker must say about each candidate.
 # Labels are decided by reading the candidate, never by freezing current output.
-# `spec`: mhd = constructs/analytic-3d-mhd-equilibrium.yaml, axisym = constructs/axisymmetric-mhd-equilibrium.yaml
+# `spec`: mhd = constructs/analytic-3d-mhd-equilibrium.yaml, axisym = constructs/axisymmetric-mhd-equilibrium.yaml,
+#         beltrami = constructs/beltrami-force-free.yaml, euler = constructs/euler-invariant-surfaces.yaml,
+#         harmonic = constructs/harmonic-nonlinear.yaml
 # A CONSTRUCTED label is only allowed for candidates whose why: says they are genuine.
 
 iota2_published:
@@ -42,89 +44,188 @@ screw_pinch_ellipse:
   spec: mhd
   verdict: PARTIAL
   unmet_hard: []
-  unverified_hard: [iota_nonzero]
+  unverified_hard: [axis_is_field_line, iota_nonzero]
   why: "z-independent screw pinch (the false CONSTRUCTED of 2026-09-30). psi = 0 only on the straight line x=y=0, not a closed toroidal axis."
 
 screw_pinch_psi_def:
   spec: mhd
   verdict: PARTIAL
   unmet_hard: []
-  unverified_hard: [iota_nonzero]
+  unverified_hard: [axis_is_field_line, iota_nonzero]
   why: "z-independent cylinder with psi defined through defs; straight axis on the z-axis."
 
 screw_pinch_shifted_axis:
   spec: mhd
   verdict: PARTIAL
-  unmet_hard: []
-  unverified_hard: [iota_nonzero]
+  unmet_hard: [nested_surfaces, nonaxisym]
+  unverified_hard: [axis_is_field_line, iota_nonzero]
   why: "z-independent screw pinch whose straight axis is x=-0.25 (negative rho at phi=0); still a line, not a ring."
 
 screw_pinch_tilted_a:
   spec: mhd
   verdict: PARTIAL
   unmet_hard: []
-  unverified_hard: [iota_nonzero]
+  unverified_hard: [axis_is_field_line, iota_nonzero]
   why: "z-independent cylinder with a tilted elliptic cross-section and a constant axial field; straight axis."
 
 screw_pinch_tilted_b:
   spec: mhd
   verdict: PARTIAL
   unmet_hard: []
-  unverified_hard: [iota_nonzero]
+  unverified_hard: [axis_is_field_line, iota_nonzero]
   why: "z-independent cylinder, axial field eps*psi-like; straight axis."
 
 wrong_force_balance_psi_nonneg:
   spec: mhd
   verdict: NOT_FOUND
   unmet_hard: [force_balance, psi_nonneg, p_nonconstant]
-  unverified_hard: [iota_nonzero]
+  unverified_hard: [axis_is_field_line, iota_nonzero]
   why: "Real v4-pro round-1 candidate; force balance wrong at every sample (relative residual ~1), psi negative somewhere, p constant."
 
 wrong_div_flux_force:
   spec: mhd
   verdict: NOT_FOUND
   unmet_hard: [div_free, flux_surface, force_balance]
-  unverified_hard: [iota_nonzero]
+  unverified_hard: [axis_is_field_line, iota_nonzero]
   why: "Real v4-pro round-4 candidate that regressed on divergence and flux-surface as well."
 
 wrong_only_force_balance_closest:
   spec: mhd
   verdict: NOT_FOUND
   unmet_hard: [force_balance]
-  unverified_hard: [iota_nonzero]
+  unverified_hard: [axis_is_field_line, iota_nonzero]
   why: "Closest real failure (v4.1-flash round 3): div B and B.grad(psi) hold exactly, force balance wrong everywhere. NOT_FOUND because force balance is a gate."
 
 synthetic_bad_divergence:
   spec: mhd
   verdict: NOT_FOUND
   unmet_hard: [div_free, flux_surface, force_balance, nonaxisym]
-  unverified_hard: [iota_nonzero]
+  unverified_hard: [axis_is_field_line, iota_nonzero]
   why: "B = (x, y, z): div B = 3."
 
 synthetic_zero_field:
   spec: mhd
   verdict: PARTIAL
   unmet_hard: [p_nonconstant, nonaxisym]
-  unverified_hard: [iota_nonzero]
+  unverified_hard: [axis_is_field_line, iota_nonzero]
   why: "B = 0 satisfies every identity vacuously; must never be CONSTRUCTED (p constant, no toroidal structure)."
 
 synthetic_undefined_everywhere:
   spec: mhd
   verdict: NOT_FOUND
   unmet_hard: [force_balance]
-  unverified_hard: [div_free, flux_surface, nonaxisym, iota_nonzero]
+  unverified_hard: [div_free, flux_surface, nonaxisym, axis_is_field_line, iota_nonzero]
   why: "Bx = sqrt(-1-x^2) is complex on the whole box (criteria unverified, never passed). force_balance is genuinely unmet because curl B vanishes symbolically while grad p = (1,0,0)."
 
 synthetic_screw_pinch_off_z_axis:
   spec: mhd
   verdict: PARTIAL
-  unmet_hard: []
-  unverified_hard: [iota_nonzero]
+  unmet_hard: [nonaxisym]
+  unverified_hard: [axis_is_field_line, iota_nonzero]
   why: "Straight axis on the line x=1, y=0 (a ring at phi=0 only). Caught today by the incidental B_phi sign change around a loop that does not enclose the z-axis; the closed-axis guard (psi = 0 at every phi) is the principled defence."
 
 synthetic_localised_singularity:
   spec: mhd
   verdict: NOT_FOUND
   unmet_hard: [force_balance]
-  unverified_hard: [iota_nonzero]
+  unverified_hard: [axis_is_field_line, iota_nonzero]
   why: "The valid iota=2 field plus a pressure term that only bites near one interior point. A few bad points inside the domain still fail force balance (strict by design)."
+
+abc_flow_known_answer:
+  spec: beltrami
+  verdict: CONSTRUCTED
+  unmet_hard: []
+  unverified_hard: []
+  why: "Arnold-Beltrami-Childress flow A=B=C=1, k=1: curl B = 1*B exactly, div B = 0, non-zero, non-axisymmetric (textbook force-free field)."
+
+abc_flow_wavenumber_two:
+  spec: beltrami
+  verdict: CONSTRUCTED
+  unmet_hard: []
+  unverified_hard: []
+  why: "ABC flow with wavenumber 2: curl B = 2*B exactly; confirms lam is read from params, not hard-wired to 1."
+
+beltrami_wrong_lambda:
+  spec: beltrami
+  verdict: NOT_FOUND
+  unmet_hard: [beltrami]
+  unverified_hard: []
+  why: "The k=1 ABC field declared with lam=2: div-free and non-zero but curl B = B != 2B, so the Beltrami gate fails; a failed gate means NOT_FOUND by definition (PARTIAL needs every gate met)."
+
+beltrami_zero_field:
+  spec: beltrami
+  verdict: PARTIAL
+  unmet_hard: [b_nonzero]
+  unverified_hard: []
+  why: "B = 0 satisfies both gates trivially; only the non-triviality criterion rejects it (must never be CONSTRUCTED)."
+
+beltrami_not_solenoidal:
+  spec: beltrami
+  verdict: NOT_FOUND
+  unmet_hard: [div_free, beltrami]
+  unverified_hard: []
+  why: "B = (x, y, z): div B = 3 and curl B = 0 != lam B; both gates fail."
+
+beltrami_undefined_everywhere:
+  spec: beltrami
+  verdict: NOT_FOUND
+  unmet_hard: []
+  unverified_hard: [div_free, beltrami, b_nonzero]
+  why: "sqrt(-1 - x^2) is undefined everywhere: every check is an error (unverified), never a pass."
+
+taylor_green_cell_known_answer:
+  spec: euler
+  verdict: CONSTRUCTED
+  unmet_hard: []
+  unverified_hard: []
+  why: "Taylor-Green cell: stream function psi = sin x sin y, vorticity 2*psi (a function of psi) so the 2D flow is a steady Euler solution with p = (cos 2x + cos 2y)/4; invariant surfaces psi = const; div-free, non-zero vorticity."
+
+euler_uniform_flow:
+  spec: euler
+  verdict: PARTIAL
+  unmet_hard: [vorticity_nonzero]
+  unverified_hard: []
+  why: "u = (1,0,0), p = 0, f = y satisfies every gate (a trivial Euler solution, y is invariant) but has zero vorticity; only the non-triviality criterion rejects it."
+
+euler_wrong_pressure:
+  spec: euler
+  verdict: NOT_FOUND
+  unmet_hard: [euler]
+  unverified_hard: []
+  why: "The Taylor-Green velocity with p = 0: div-free and f invariant, but the Euler balance needs the pressure (cos 2x + cos 2y)/4; the euler gate fails."
+
+euler_f_not_invariant:
+  spec: euler
+  verdict: NOT_FOUND
+  unmet_hard: [invariant]
+  unverified_hard: []
+  why: "Correct Taylor-Green flow and pressure but f = x is not an invariant of the flow (u.grad x = sin x cos y != 0); the invariant gate fails."
+
+harmonic_exp_cos_known_answer:
+  spec: harmonic
+  verdict: CONSTRUCTED
+  unmet_hard: []
+  unverified_hard: []
+  why: "phi = exp(x) cos(y) = Re exp(x + iy): harmonic, and |grad phi|^2 = exp(2x) varies."
+
+harmonic_affine_function:
+  spec: harmonic
+  verdict: PARTIAL
+  unmet_hard: [gradient_varies]
+  unverified_hard: []
+  why: "An affine function is trivially harmonic but |grad phi|^2 is constant; only the non-triviality criterion rejects it."
+
+harmonic_not_harmonic:
+  spec: harmonic
+  verdict: NOT_FOUND
+  unmet_hard: [laplace]
+  unverified_hard: []
+  why: "phi = x^2 + y^2 + z^2 has laplacian 6, not 0."
+
+shifted_axis_solovev_axisymmetric_about_x03:
+  spec: mhd
+  verdict: PARTIAL
+  unmet_hard: [nonaxisym]
+  unverified_hard: []
+  why: "FALSE CONSTRUCTED found in live run p42-p44-tiered/run-1 (2026-10-03): a Solov'ev equilibrium whose axis is translated to x = 0.3. Every other criterion is genuinely met, but the field is axisymmetric about the vertical line x = 0.3, so it does not break axisymmetry; the old check only tried rotations about the z-axis and was fooled by the translation."
+

@@ -34,7 +34,7 @@ async def test_known_positive_published_field_is_partial_with_only_iota_unverifi
     out = await check(_SPEC, json.loads(_IOTA2_PATH.read_text()))
     assert out["verdict"] == "PARTIAL"
     assert out["unmet_hard"] == []
-    assert out["unverified_hard"] == ["iota_nonzero"]
+    assert out["unverified_hard"] == ["axis_is_field_line", "iota_nonzero"]
 
 
 async def test_known_bad_divergence_is_not_found():
@@ -152,7 +152,7 @@ async def test_z_independent_screw_pinch_is_not_constructed(monkeypatch):
     iota = await IotaTraceTransform(inp, {"spec_path": spec, "source": "G", "timeout_seconds": 120}, ctx)
     out = await ConstructCriteriaTransform({"checks": checks, "iota": iota}, {"spec_path": spec, "sources": ["checks", "iota"]}, ctx)
     assert out["verdict"] == "PARTIAL", out["checklist"]
-    assert out["unverified_hard"] == ["iota_nonzero"]
+    assert out["unverified_hard"] == ["axis_is_field_line", "iota_nonzero"]
     detail = next(r for r in out["checklist"] if r["id"] == "iota_nonzero")["evidence"]["detail"]
     assert "z-axis" in detail
 

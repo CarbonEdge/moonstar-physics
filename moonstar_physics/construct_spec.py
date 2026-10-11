@@ -18,8 +18,8 @@ import yaml
 SUPPORTED_CHECKS = frozenset(
     {"divergence_zero", "identity_zero", "numeric_sample", "sandbox_experiment", "manual"}
 )
-NUMERIC_KINDS = frozenset({"nonnegative", "nonconstant", "axisymmetry_breaking"})
-SANDBOX_KINDS = frozenset({"iota_nonzero", "iota_noninteger"})
+NUMERIC_KINDS = frozenset({"nonnegative", "nonconstant", "axisymmetry_breaking", "nested_surfaces", "nonzero"})
+SANDBOX_KINDS = frozenset({"iota_nonzero", "iota_noninteger", "axis_is_field_line"})
 GATE_CHECKS = frozenset({"divergence_zero", "identity_zero"})
 _AXES = ("x", "y", "z")
 _ALLOWED_TOP_LEVEL = frozenset(

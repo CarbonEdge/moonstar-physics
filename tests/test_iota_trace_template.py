@@ -117,3 +117,10 @@ def test_axis_that_is_zero_psi_only_at_phi_zero_is_not_a_closed_axis():
     out = run_script_locally(_script_for(cand))
     assert set(out) == {"error"} and "closed curve" in out["error"], out
 
+
+
+def test_axis_tangent_metric_is_near_zero_for_true_axes():
+    for cand in (_torus_candidate(["-y", "x", "0"]), json.loads(_FIXTURE.read_text(encoding="utf-8"))):
+        out = run_script_locally(_script_for(cand))
+        assert "error" not in out, out
+        assert out["axis_tangent_max_sin"] < 0.05, out

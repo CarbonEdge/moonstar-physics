@@ -62,9 +62,10 @@ def crashed_result(exc: BaseException) -> dict:
 def parse_args(argv: list[str]) -> dict | None:
     if len(argv) < 2:
         return None
-    opts: dict = {"spec": argv[1], "n": 5, "tag": None, "max_rounds": None, "models": None, "note": None}
+    opts: dict = {"spec": argv[1], "n": 5, "tag": None, "max_rounds": None, "models": None, "note": None, "candidates": 2}
     flags = {"--n": ("n", int), "--tag": ("tag", str), "--max-rounds": ("max_rounds", int),
-             "--models": ("models", str), "--note": ("note", str)}
+             "--models": ("models", str), "--note": ("note", str),
+             "--candidates": ("candidates", int)}
     rest = argv[2:]
     while rest:
         if len(rest) < 2 or rest[0] not in flags:
@@ -75,7 +76,7 @@ def parse_args(argv: list[str]) -> dict | None:
         except ValueError:
             return None
         rest = rest[2:]
-    if not opts["tag"] or opts["n"] < 1:
+    if not opts["tag"] or opts["n"] < 1 or not 2 <= opts["candidates"] <= 6:
         return None
     return opts
 
@@ -101,13 +102,14 @@ async def _bench(opts: dict) -> int:
         "tag": opts["tag"], "date": datetime.date.today().isoformat(), "spec": spec.slug,
         "models": models_path.name, "models_content": json.loads(models_path.read_text(encoding="utf-8")),
         "max_rounds": opts["max_rounds"] if opts["max_rounds"] is not None else spec.budget.get("max_rounds"),
-        "n_requested": opts["n"], "note": opts["note"],
+        "n_requested": opts["n"], "note": opts["note"], "candidates_per_round": opts["candidates"],
     }
     (out_dir / "meta.json").write_text(json.dumps(meta, indent=1), encoding="utf-8")
     for i in range(1, opts["n"] + 1):
         try:
             result = await run_construct(
-                opts["spec"], gateway_url, token, _PIPELINE, models_path, max_rounds=opts["max_rounds"]
+                opts["spec"], gateway_url, token, _PIPELINE, models_path, max_rounds=opts["max_rounds"],
+                candidates_per_round=opts["candidates"],
             )
         except Exception as e:  # noqa: BLE001 - record the crash, keep the campaign going
             result = crashed_result(e)

@@ -1,0 +1,18 @@
+{
+ "defs": {
+  "X": "x - 0.3",
+  "Y": "y",
+  "Rsq": "X**2 + Y**2"
+ },
+ "objects": {
+  "B": [
+   "-2*z*X - Y/Rsq",
+   "-2*z*Y + X/Rsq",
+   "2*(Rsq - 1 + z**2)"
+  ],
+  "psi": "(Rsq - 1)**2/2 + Rsq*z**2",
+  "p": "-6*psi"
+ },
+ "params": {},
+ "derivation_notes": "Exact shifted Solov'ev equilibrium: psi = (R^2-1)^2/2 + R^2 z^2 with R^2=(x-0.3)^2+y^2 has psi>=0 and psi=0 only on the circle (x-0.3)^2+y^2=1, z=0, which is the magnetic axis. B = (1/R) grad(psi) x e_phi + (F0/R) e_phi with F0=1 gives div B = 0, B.grad(psi)=0, and (curl B) x B = grad p exactly with p = -6 psi (from Delta* psi = 6 R^2 = -R^2 dp/dpsi). Non-axisymmetry arises from the 0.3 offset of the axis from the origin. The derivation notes the epsilon/rotating-elongation modulation was dropped in favour of this explicit exact construction; it also notes that axis_is_field_line and iota_nonzero are expected to hold (B is tangent to the axis circle; finite F0 gives nonzero rotational transform) but are asserted, not proven here."
+}

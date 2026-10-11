@@ -57,9 +57,11 @@ def test_format_summary_for_failed_run_shows_error():
 
 
 def test_parse_args_reads_max_rounds():
-    assert script._parse_args(["run_construct.py", "s.yaml"]) == ("s.yaml", None, None)
-    assert script._parse_args(["run_construct.py", "s.yaml", "--max-rounds", "3"]) == ("s.yaml", 3, None)
-    assert script._parse_args(["run_construct.py", "s.yaml", "--models", "m.json", "--max-rounds", "2"]) == ("s.yaml", 2, "m.json")
+    assert script._parse_args(["run_construct.py", "s.yaml"]) == ("s.yaml", None, None, 2)
+    assert script._parse_args(["run_construct.py", "s.yaml", "--max-rounds", "3"]) == ("s.yaml", 3, None, 2)
+    assert script._parse_args(["run_construct.py", "s.yaml", "--models", "m.json", "--max-rounds", "2"]) == ("s.yaml", 2, "m.json", 2)
+    assert script._parse_args(["run_construct.py", "s.yaml", "--candidates", "4"]) == ("s.yaml", None, None, 4)
+    assert script._parse_args(["run_construct.py", "s.yaml", "--candidates", "9"]) is None
     assert script._parse_args(["run_construct.py", "s.yaml", "--bogus", "1"]) is None
     assert script._parse_args(["run_construct.py"]) is None
     assert script._parse_args(["run_construct.py", "s.yaml", "--max-rounds", "x"]) is None

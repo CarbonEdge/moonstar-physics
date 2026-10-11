@@ -121,7 +121,7 @@ def _fmt_stats(s: dict[str, float] | None, fmt: str) -> str:
 def render_report(meta: dict[str, Any], agg: dict[str, Any], summaries: list[dict[str, Any]]) -> str:
     n = agg["n"]
     lines = [f"# Construct bench: {meta.get('tag', '?')}", ""]
-    for k in ("date", "spec", "models", "max_rounds", "note"):
+    for k in ("date", "spec", "models", "max_rounds", "candidates_per_round", "note"):
         if meta.get(k) is not None:
             lines.append(f"- {k}: {meta[k]}")
     lines += [f"- runs: {n} ({agg['completed']} completed, {agg['failed']} failed)", ""]

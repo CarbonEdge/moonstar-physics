@@ -58,31 +58,37 @@ _MAX_POLLS = 90
 
 _DUMMY_CTX = SessionContext()
 
-# Transform types this module runs locally instead of dispatching to the
-# gateway — must match physics_hypothesis.yaml's wave-1 deterministic steps.
-_LOCAL_TRANSFORMS: dict[str, Callable[[dict[str, Any], dict[str, Any], SessionContext], Awaitable[dict[str, Any]]]] = {
+_Transform = Callable[[dict[str, Any], dict[str, Any], SessionContext], Awaitable[dict[str, Any]]]
+
+# The single table of deterministic transforms this module runs locally instead of
+# dispatching them to the gateway. Each pipeline below uses a named subset of it.
+_ALL_LOCAL_TRANSFORMS: dict[str, _Transform] = {
     "ConservationLawCheckTransform": ConservationLawCheckTransform,
     "QMCalculationTransform": QMCalculationTransform,
     "ReferenceDataLookupTransform": ReferenceDataLookupTransform,
     "DimensionConsistencyTransform": DimensionConsistencyTransform,
-}
-
-
-# Transform types run locally for the proof_hypothesis pipeline — must
-# match proof_hypothesis.yaml's and proof_hypothesis_numerical.yaml's
-# shared wave-1 deterministic step (both pipelines use it identically).
-_PROOF_LOCAL_TRANSFORMS: dict[str, Callable[[dict[str, Any], dict[str, Any], SessionContext], Awaitable[dict[str, Any]]]] = {
     "AlgebraicClaimsCheckTransform": AlgebraicClaimsCheckTransform,
-}
-
-
-# Transform types run locally for the construct pipeline (Phase 1 checker
-# stages + Phase 2 iota sandbox stage; consumed by construct_pipeline.run_construct.
-_CONSTRUCT_LOCAL_TRANSFORMS: dict[str, Callable[[dict[str, Any], dict[str, Any], SessionContext], Awaitable[dict[str, Any]]]] = {
     "VectorCalculusCheckTransform": VectorCalculusCheckTransform,
     "ConstructCriteriaTransform": ConstructCriteriaTransform,
     "IotaTraceTransform": IotaTraceTransform,
 }
+
+
+def _subset(*names: str) -> dict[str, _Transform]:
+    return {n: _ALL_LOCAL_TRANSFORMS[n] for n in names}
+
+
+# physics_hypothesis.yaml's wave-1 deterministic steps.
+_LOCAL_TRANSFORMS = _subset(
+    "ConservationLawCheckTransform", "QMCalculationTransform",
+    "ReferenceDataLookupTransform", "DimensionConsistencyTransform",
+)
+# proof_hypothesis.yaml's and proof_hypothesis_numerical.yaml's shared wave-1 step.
+_PROOF_LOCAL_TRANSFORMS = _subset("AlgebraicClaimsCheckTransform")
+# The construct pipeline's checker stages + iota sandbox stage (construct_pipeline.run_construct).
+_CONSTRUCT_LOCAL_TRANSFORMS = _subset(
+    "VectorCalculusCheckTransform", "ConstructCriteriaTransform", "IotaTraceTransform"
+)
 
 
 class PipelineRunError(RuntimeError):

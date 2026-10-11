@@ -26,7 +26,7 @@ from .construct_spec import load_construct_spec
 from .maths._safe_parse import UnsafeExpressionError
 from .vector_calculus import COORDS, curl, grad
 from .vector_calculus_check_transform import (
-    _MIN_VALID, _CandidateError, _evaluate, _resolve_candidate, _sample,
+    _DEFAULT_UNKNOWNS, _MIN_VALID, axisymmetry_deviation, _CandidateError, _evaluate, _resolve_candidate, _resolve_env, _sample,
 )
 
 ABS_TOL = 1e-8
@@ -113,3 +113,34 @@ def candidate_health(spec_path: Any, candidate: dict[str, Any], *, seed: int = 1
     else:
         out["classification"] = "wrong"
     return out
+
+
+def family_tags(spec_path: Any, candidate: dict[str, Any], *, seed: int = 1) -> list[str]:
+    """Deterministic structural tags naming WHAT KIND of object a candidate is (decision D3: a
+    CONSTRUCTED result is named by family so a human can check the literature; it is never a
+    novelty claim). Tags: axisymmetric / non-axisymmetric, z-independent, uses-free-parameter."""
+    spec = load_construct_spec(spec_path)
+    dof_names = [d.name for d in spec.degrees_of_freedom]
+    try:
+        env = _resolve_env(candidate, dof_names, spec.unknowns or _DEFAULT_UNKNOWNS)
+    except (_CandidateError, UnsafeExpressionError, ValueError, TypeError):
+        return []
+    vec = next((v for v in env.values() if isinstance(v, tuple)), None)
+    fixed = candidate.get("params") if isinstance(candidate.get("params"), dict) else {}
+    arg_syms = [*COORDS, *(sympy.Symbol(n) for n in dof_names)]
+    arrays = _sample(spec, fixed, np.random.default_rng(seed))
+    tags: list[str] = []
+    try:
+        fields = [e for v in env.values() for e in (v if isinstance(v, tuple) else (v,)) if isinstance(e, sympy.Expr)]
+        used = set().union(*(e.free_symbols for e in fields)) if fields else set()
+        if sympy.Symbol("z") not in used:
+            tags.append("z-independent")
+        if any(sympy.Symbol(n) in used for n in dof_names):
+            tags.append("uses-free-parameter")
+        if vec is not None:
+            dev, _centre, n_valid = axisymmetry_deviation(vec, arg_syms, arrays)
+            if n_valid >= _MIN_VALID:
+                tags.append("non-axisymmetric" if dev > 1e-6 else "axisymmetric")
+    except Exception:  # noqa: BLE001 - tags are best-effort labels
+        pass
+    return tags

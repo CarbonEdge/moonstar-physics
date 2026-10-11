@@ -13,7 +13,9 @@ computed by code; the synthesizer's first line is overwritten to match.
 from __future__ import annotations
 
 import asyncio
+import copy
 import json
+import os
 import time
 import uuid
 from pathlib import Path
@@ -24,6 +26,12 @@ import httpx
 from ._compat import NonRetryableTransformError
 from ._pipeline_spec import PipelineSpec, TransformSpec, render_pipeline_yaml
 from .construct_cost import load_prices, run_cost_breakdown, run_cost_usd, usage_by_model
+from .construct_diagnose import family_tags
+from .construct_history import (  # noqa: F401 - re-exported: tests and scripts import these names here
+    _DIAG_MAX_CHARS, _RANK, _loads_lenient, _cand_score, _candidate_summary, _cap_diagnostics, _evidence, _feedback,
+    _hard_met, _planner_view, _round_score, _round_summary,
+)
+from .construct_residuals import diagnose_with_timeout
 from .construct_spec import GATE_CHECKS, ConstructSpec, load_construct_spec
 from .local_pipeline import (
     _CONSTRUCT_LOCAL_TRANSFORMS,
@@ -32,13 +40,18 @@ from .local_pipeline import (
     _submit_single_node,
 )
 
-_RANK = {"NOT_FOUND": 0, "PARTIAL": 1, "CONSTRUCTED": 2}
 # Generators are long-reasoning calls; the shared 90-poll (180 s) ceiling is too short.
 _LLM_MAX_POLLS = 600  # x _POLL_INTERVAL_SECONDS (2 s) = 20 min per LLM step
 # Live run 2026-09-29: OpenRouter intermittently returns an undecodable body on long calls
 # (gateway reports `failed`, no retry). One retry of a failed LLM step is cheap insurance.
 _LLM_ATTEMPTS = 2
-_HISTORY_ROUNDS = 2
+_LABELS = "ABCDEF"
+_MAX_CANDIDATES = len(_LABELS)
+# Candidates generated at once. The gateway itself allows far more (MAX_GLOBAL_TRANSFORMS=20,
+# MAX_SESSION_PARALLELISM=4, OPENROUTER_MAX_INFLIGHT=20 by default); 2 is the pace live runs
+# showed to be safe with the provider. Raise it with CONSTRUCT_MAX_CONCURRENT after measuring.
+_MAX_CONCURRENT_CANDIDATES = max(1, int(os.environ.get("CONSTRUCT_MAX_CONCURRENT", "2")))
+_REPAIR_MODEL_KEY = "MODEL_REPAIR"
 _DEFAULT_PRICES_PATH = Path(__file__).resolve().parent.parent / "pipelines" / "prices.json"
 
 
@@ -58,41 +71,26 @@ def _task_payload(spec: ConstructSpec) -> dict[str, Any]:
     }
 
 
-def _loads_lenient(raw: Any) -> Any:
-    if not isinstance(raw, str):
-        return None
-    text = raw.strip()
-    if text.startswith("```"):
-        parts = text.split("```")
-        if len(parts) >= 2:
-            text = parts[1]
-            if text.startswith("json"):
-                text = text[4:]
-    try:
-        return json.loads(text.strip())
-    except json.JSONDecodeError:
-        return None
-
-
 def _parse_assignments(
-    planner_data: dict[str, Any], spec: ConstructSpec
-) -> tuple[dict[str, str], dict[str, str], bool]:
+    planner_data: dict[str, Any], spec: ConstructSpec, labels: tuple[str, ...] = ("A", "B")
+) -> tuple[dict[str, dict[str, str]], bool]:
+    """label -> {"mechanism", "ansatz"} from the planner's generator_<letter> entries; any
+    label the planner did not (validly) assign falls back to the spec's mechanism hints."""
     plan = _loads_lenient(planner_data.get("response"))
-    try:
-        a, b = plan["generator_a"], plan["generator_b"]
-        out = []
-        for g in (a, b):
-            mech, ansatz = g["mechanism"], g["ansatz"]
-            if not (isinstance(mech, str) and isinstance(ansatz, str) and mech.strip()):
-                raise KeyError
-            out.append({"mechanism": mech, "ansatz": ansatz})
-        return out[0], out[1], False
-    except (TypeError, KeyError):
-        hints = list(spec.mechanism_hints) or ["free choice"]
-        first = {"mechanism": hints[0], "ansatz": ""}
-        second = {"mechanism": hints[1 % len(hints)] if len(hints) > 1 else "an approach different from generator A",
-                  "ansatz": ""}
-        return first, second, True
+    plan = plan if isinstance(plan, dict) else {}
+    hints = list(spec.mechanism_hints) or ["free choice"]
+    out: dict[str, dict[str, str]] = {}
+    fallback = False
+    for i, label in enumerate(labels):
+        g = plan.get(f"generator_{label.lower()}")
+        if (isinstance(g, dict) and isinstance(g.get("mechanism"), str) and g["mechanism"].strip()
+                and isinstance(g.get("ansatz"), str)):
+            out[label] = {"mechanism": g["mechanism"], "ansatz": g["ansatz"]}
+            continue
+        fallback = True
+        mech = hints[i % len(hints)] if (i == 0 or len(hints) > 1) else "an approach different from generator A"
+        out[label] = {"mechanism": mech, "ansatz": ""}
+    return out, fallback
 
 
 def _enforce_verdict_line(text: str, verdict: str) -> str:
@@ -128,6 +126,8 @@ async def _evaluate_candidate(
         gate_ok = all(
             r["status"] == "pass" for r in checks["results"] if r.get("check") in GATE_CHECKS
         )
+        if not gate_ok:
+            await _attach_diagnostics(lo, gen_input[gen_name], checks, spec_path, artifacts)
         if gate_ok:
             iota = await _CONSTRUCT_LOCAL_TRANSFORMS["IotaTraceTransform"](
                 gen_input, {**nodes[f"iota_{lo}"].config, "spec_path": spec_path}, _DUMMY_CTX
@@ -143,83 +143,28 @@ async def _evaluate_candidate(
         artifacts[f"criteria_{lo}"] = _not_found_row(str(e))
 
 
+async def _attach_diagnostics(
+    lo: str, generator: dict[str, Any], checks: dict[str, Any], spec_path: str,
+    artifacts: dict[str, dict[str, Any]],
+) -> None:
+    """Symbolic/point residual diagnostics for the failed gates (P4.3). Best effort."""
+    candidate = _loads_lenient(generator.get("response"))
+    failed = [r["id"] for r in checks["results"] if r.get("check") in GATE_CHECKS and r["status"] == "fail"]
+    if not isinstance(candidate, dict) or not failed:
+        return
+    try:
+        diag = await asyncio.to_thread(diagnose_with_timeout, str(spec_path), candidate, failed)
+    except Exception:  # noqa: BLE001 - diagnostics must never sink a candidate
+        return
+    if diag:
+        artifacts[f"diag_{lo}"] = {
+            "diagnostics": diag, "_model": "none", "_provider": "none",
+            "_input_tokens": 0, "_output_tokens": 0,
+        }
+
+
 def _packed(artifacts: dict[str, dict[str, Any]]) -> list[dict[str, Any]]:
     return [{"transform_name": n, "data": d} for n, d in artifacts.items()]
-
-
-def _evidence(criteria: dict[str, Any]) -> dict[str, dict[str, Any]]:
-    out: dict[str, dict[str, Any]] = {}
-    for row in criteria.get("checklist", []):
-        ev = row.get("evidence") or {}
-        entry: dict[str, Any] = {"status": row.get("status"), "hard": row.get("hard")}
-        for key in ("max_residual", "value", "iota", "detail"):
-            if ev.get(key) is not None:
-                entry[key] = ev[key]
-        out[row["id"]] = entry
-    return out
-
-
-def _candidate_summary(label: str, artifacts: dict[str, dict[str, Any]]) -> dict[str, Any]:
-    crit = artifacts.get(f"criteria_{label.lower()}", {})
-    parsed = _loads_lenient(artifacts.get(f"Generator_{label}", {}).get("response"))
-    parsed = parsed if isinstance(parsed, dict) else {}
-    return {
-        "verdict": crit.get("verdict", "NOT_FOUND"),
-        "unmet_hard": list(crit.get("unmet_hard", [])),
-        "unverified_hard": list(crit.get("unverified_hard", [])),
-        "evidence": _evidence(crit),
-        "candidate": {k: parsed[k] for k in ("defs", "objects", "params") if k in parsed},
-        "derivation_notes": parsed.get("derivation_notes", ""),
-        "error": crit.get("error"),
-    }
-
-
-def _round_summary(
-    round_no: int, verdict: str, best: str, artifacts: dict[str, dict[str, Any]]
-) -> dict[str, Any]:
-    return {
-        "round": round_no, "verdict": verdict, "best_candidate": best,
-        "candidates": {l: _candidate_summary(l, artifacts) for l in ("A", "B")},
-    }
-
-
-def _round_score(h: dict[str, Any]) -> tuple[int, int, int]:
-    best = h["candidates"][h["best_candidate"]]
-    return (_RANK[h["verdict"]], -len(best["unmet_hard"]), h["round"])
-
-
-def _feedback(history: list[dict[str, Any]]) -> dict[str, Any] | None:
-    """The best candidate seen so far (by verdict, then fewest unmet hard
-    criteria, then latest) with its evidence, as the repair target."""
-    best: tuple[tuple[int, int, int], int, str, dict[str, Any]] | None = None
-    for h in history:
-        for label, c in h["candidates"].items():
-            if not c["candidate"]:
-                continue
-            score = (_RANK[c["verdict"]], -len(c["unmet_hard"]), h["round"])
-            if best is None or score > best[0]:
-                best = (score, h["round"], label, c)
-    if best is None:
-        return None
-    _, rnd, label, c = best
-    return {
-        "from_round": rnd, "from_candidate": label, "previous_best": c["candidate"],
-        "evidence": c["evidence"], "unmet_hard": c["unmet_hard"],
-        "unverified_hard": c["unverified_hard"], "derivation_notes": c["derivation_notes"],
-    }
-
-
-def _planner_view(history: list[dict[str, Any]]) -> list[dict[str, Any]]:
-    return [
-        {
-            "round": h["round"], "verdict": h["verdict"], "best_candidate": h["best_candidate"],
-            "candidates": {
-                l: {k: v for k, v in c.items() if k != "candidate"}
-                for l, c in h["candidates"].items()
-            },
-        }
-        for h in history[-_HISTORY_ROUNDS:]
-    ]
 
 
 def _make_llm(client, gateway_url, token, nodes, store):
@@ -241,58 +186,102 @@ def _make_llm(client, gateway_url, token, nodes, store):
 async def _run_round(
     client: httpx.AsyncClient, gateway_url: str, token: str, spec: ConstructSpec, spec_path: str,
     nodes: dict[str, TransformSpec], artifacts: dict[str, dict[str, Any]],
-    round_no: int, history: list[dict[str, Any]],
+    round_no: int, history: list[dict[str, Any]], labels: tuple[str, ...] = ("A", "B"),
 ) -> tuple[str, str]:
     task = _task_payload(spec)
     feedback = _feedback(history)
     llm = _make_llm(client, gateway_url, token, nodes, artifacts)
 
-    planner = await llm("Planner", {"task": task, "history": _planner_view(history)})
-    assign_a, assign_b, fallback = _parse_assignments(planner, spec)
+    planner = await llm("Planner", {
+        "task": task, "history": _planner_view(history), "candidates": len(labels),
+    })
+    assignments, fallback = _parse_assignments(planner, spec, labels)
     if fallback:
         planner["planner_fallback"] = True
+    gate = asyncio.Semaphore(_MAX_CONCURRENT_CANDIDATES)
 
     async def generate(label: str, assignment: dict[str, str]) -> None:
         # Two calls per candidate keep each under the gateway's LLM timeout: a long
         # reasoning "derive" step, then a cheap "formalise" step that emits strict JSON.
-        derive_input: dict[str, Any] = {"task": task, "assignment": assignment}
-        if feedback:
-            derive_input["feedback"] = feedback
-        derive = await llm(f"Derive_{label}", derive_input)
-        await llm(f"Generator_{label}", {
-            "task": task, "assignment": assignment, "derivation": derive.get("response"),
-        })
+        async with gate:
+            derive_input: dict[str, Any] = {"task": task, "assignment": assignment}
+            if feedback:
+                derive_input["feedback"] = feedback
+            derive = await llm(f"Derive_{label}", derive_input)
+            await llm(f"Generator_{label}", {
+                "task": task, "assignment": assignment, "derivation": derive.get("response"),
+            })
 
-    # Candidates run concurrently. A candidate whose generation fails is NOT_FOUND
-    # alone; the run fails only if BOTH do.
+    # Candidates run concurrently (at most two gateway slots at a time). A candidate whose
+    # generation fails is NOT_FOUND alone; the run fails only if EVERY candidate does.
     results = await asyncio.gather(
-        generate("A", assign_a), generate("B", assign_b), return_exceptions=True
+        *(generate(l, assignments[l]) for l in labels), return_exceptions=True
     )
     gen_errors: dict[str, PipelineRunError] = {}
-    for label, res in zip(("A", "B"), results):
+    for label, res in zip(labels, results):
         if isinstance(res, PipelineRunError):
             gen_errors[label] = res
             artifacts[f"criteria_{label.lower()}"] = _not_found_row(f"generation failed: {res}")
         elif isinstance(res, BaseException):
             raise res
-    if len(gen_errors) == 2:
-        raise gen_errors["B"]
-    for label in ("A", "B"):
+    if len(gen_errors) == len(labels):
+        raise gen_errors[labels[-1]]
+    for label in labels:
         if label not in gen_errors:
             await _evaluate_candidate(
                 label, f"Generator_{label}", nodes, spec_path, artifacts, seed=round_no
             )
 
-    verdicts = {l: artifacts[f"criteria_{l.lower()}"]["verdict"] for l in ("A", "B")}
+    verdicts = {l: artifacts[f"criteria_{l.lower()}"]["verdict"] for l in labels}
     best = max(
-        ("A", "B"),
+        labels,
         key=lambda l: (
-            _RANK[verdicts[l]],
-            -len(artifacts[f"criteria_{l.lower()}"].get("unmet_hard", [])),
+            *_cand_score(verdicts[l], _candidate_summary(l, artifacts), round_no)[:3],
             l == "A",
         ),
     )
     return verdicts[best], best
+
+
+def _expand_candidates(nodes: dict[str, TransformSpec], labels: tuple[str, ...]) -> None:
+    """The pipeline YAML defines candidates A and B; extra labels are clones of A's nodes."""
+    for label in labels[2:]:
+        for stem, lower in (("Derive", False), ("Generator", False), ("checks", True),
+                            ("iota", True), ("criteria", True)):
+            clone = copy.deepcopy(nodes[f"{stem}_a" if lower else f"{stem}_A"])
+            clone.name = f"{stem}_{label.lower()}" if lower else f"{stem}_{label}"
+            if "source" in clone.config:
+                clone.config["source"] = f"Generator_{label}"
+            nodes[clone.name] = clone
+
+
+def _round_nodes(
+    nodes: dict[str, TransformSpec], labels: tuple[str, ...], repair_model: str | None, round_no: int
+) -> dict[str, TransformSpec]:
+    """Tiering (P4.4): flash does breadth in round 1, the pro `MODEL_REPAIR` model does the
+    depth - every Derive call in repair rounds. Without a repair model, nodes are unchanged."""
+    if not repair_model or round_no < 2:
+        return nodes
+    out = dict(nodes)
+    for label in labels:
+        node = copy.deepcopy(nodes[f"Derive_{label}"])
+        node.config["model"] = repair_model
+        out[node.name] = node
+    return out
+
+
+def _best_family(
+    spec: ConstructSpec, spec_path: str, artifacts: dict[str, dict[str, Any]], label: str
+) -> dict[str, Any]:
+    """Names the best candidate by family (decision D3): the planner's mechanism + deterministic
+    structural tags. A label for a human literature check, never a novelty claim."""
+    try:
+        assignments, _ = _parse_assignments(artifacts.get("Planner", {}), spec, tuple(_LABELS))
+    except Exception:  # noqa: BLE001
+        assignments = {}
+    candidate = _loads_lenient(artifacts.get(f"Generator_{label}", {}).get("response"))
+    tags = family_tags(spec_path, candidate) if isinstance(candidate, dict) else []
+    return {"mechanism": assignments.get(label, {}).get("mechanism", ""), "tags": tags}
 
 
 async def _review(
@@ -329,10 +318,16 @@ async def run_construct(
     *,
     max_rounds: int | None = None,
     prices_path: Any = None,
+    candidates_per_round: int = 2,
 ) -> dict[str, Any]:
     spec = load_construct_spec(spec_path)
+    if not 2 <= candidates_per_round <= _MAX_CANDIDATES:
+        raise ValueError(f"candidates_per_round must be between 2 and {_MAX_CANDIDATES}")
+    labels = tuple(_LABELS[:candidates_per_round])
     text = render_pipeline_yaml(pipeline_path, models_path)
     nodes = PipelineSpec.from_yaml_text(text).by_name()
+    _expand_candidates(nodes, labels)
+    repair_model = json.loads(Path(models_path).read_text(encoding="utf-8")).get(_REPAIR_MODEL_KEY)
     prices = load_prices(prices_path or _DEFAULT_PRICES_PATH)
     rounds_limit = max(1, max_rounds if max_rounds is not None else int(spec.budget.get("max_rounds", 1)))
     max_usd = spec.budget.get("max_usd")
@@ -358,8 +353,8 @@ async def run_construct(
                     current = {}
                     try:
                         verdict, best = await _run_round(
-                            client, gateway_url, token, spec, str(spec_path), nodes,
-                            current, n, history,
+                            client, gateway_url, token, spec, str(spec_path),
+                            _round_nodes(nodes, labels, repair_model, n), current, n, history, labels,
                         )
                     except (NonRetryableTransformError, PipelineRunError) as e:
                         if not rounds:
@@ -370,7 +365,10 @@ async def run_construct(
                     cost, _ = run_cost_usd(current.values(), prices)
                     rounds.append({"round": n, "verdict": verdict, "best_candidate": best,
                                    "cost_usd": cost, "artifacts": _packed(current)})
-                    history.append(_round_summary(n, verdict, best, current))
+                    anchor = _feedback(history)
+                    history.append(_round_summary(
+                        n, verdict, best, current, anchor["must_still_pass"] if anchor else None, labels,
+                    ))
                     if verdict == "CONSTRUCTED":
                         stop_reason = "constructed"
                         break
@@ -394,12 +392,13 @@ async def run_construct(
         return failed(str(e))
 
     best_h = max(history, key=_round_score)
+    family = _best_family(spec, str(spec_path), raw[best_h["round"]], best_h["best_candidate"])
     all_datas = [d for r in raw.values() for d in r.values()] + list(review.values())
     cost = run_cost_breakdown(all_datas, prices)
     return {
         "status": "completed", "session_id": session_id, "verdict": best_h["verdict"],
         "best_candidate": best_h["best_candidate"], "best_round": best_h["round"],
-        "stop_reason": stop_reason, "rounds": rounds, "cost_usd": cost["total_usd"],
+        "best_family": family, "stop_reason": stop_reason, "rounds": rounds, "cost_usd": cost["total_usd"],
         "cost_reported_usd": cost["reported_usd"], "cost_estimated_usd": cost["estimated_usd"],
         "cost_truncated_usd": cost["truncated_usd"], "cost_is_exact": cost["is_exact"],
         "unpriced_models": cost["unpriced_models"], "token_usage": usage_by_model(all_datas),

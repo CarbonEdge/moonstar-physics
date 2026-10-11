@@ -29,7 +29,13 @@ transforms:
         is a REPAIR round: it lists previous rounds (per candidate: verdict,
         unmet/unverified criteria, numeric evidence, derivation notes). Say in
         "target" which unmet criterion this round attacks, keep what already
-        passes, and give the two generators DIFFERENT repair strategies.
+        passes, and give the two generators DIFFERENT repair strategies. In a
+        repair round use an explore/exploit split: generator_a EXPLOITS (a
+        minimal repair of the best previous candidate); generator_b EXPLORES
+        (a fresh derivation with a different mechanism, aimed at satisfying
+        the hardest unmet criterion TOGETHER WITH every criterion the best
+        candidate already meets - it must not be a blind restart). Name the
+        criteria already met and the target in each ansatz.
         Output ONLY the JSON object
         below, no markdown fences, no commentary.
 
@@ -39,6 +45,11 @@ transforms:
           "generator_b": {"mechanism": "<a different mechanism>", "ansatz": "<1-3 sentences>"},
           "target": "<which hard criterion is likely hardest and why, one sentence>"
         }
+
+        The input's "candidates" field says how many generators run (2 to 6).
+        If it is greater than 2, ALSO add generator_c, generator_d, ... (as
+        many as "candidates" says, same shape as generator_a) - every
+        mechanism distinct from all the others.
 
         Rules:
         - The two mechanisms must differ.
@@ -63,9 +74,15 @@ transforms:
         also has a "feedback" object, this is a REPAIR round: "feedback" holds
         the best previous candidate ("previous_best": its defs, objects and
         params), the checker's evidence for it ("evidence": criterion id ->
-        status and residual) and its unmet criteria. Keep what already
-        passes, change the minimum needed to fix the failing criteria, and
-        say in section 5 what you changed and why. A separate
+        status and residual), its unmet criteria ("must_fix") and the criteria
+        it already meets ("must_still_pass"). A repair that breaks a
+        "must_still_pass" criterion is a FAILED repair; if "regressions" is
+        non-empty, last round's candidates broke exactly those criteria - do
+        not repeat that. Never drop a hard criterion to satisfy the others:
+        a candidate that gives one up is worse than one that meets it and
+        misses another. Keep what already passes, change the minimum needed
+        to fix the failing criteria (unless your assignment is a fresh
+        derivation), and say in section 5 what you changed and why. A separate
         stage will turn your write-up into strict JSON, so your job is the
         mathematics, not the formatting. Write plain text / markdown with
         exactly these sections:
@@ -74,7 +91,9 @@ transforms:
            cylindrical/toroidal coordinates yourself).
         2. Definitions: every named sub-expression as an explicit formula in
            x, y, z and the free parameters, in dependency order.
-        3. The fields: B = (Bx, By, Bz), psi, p as explicit formulas.
+        3. The fields: every unknown listed in the task's "unknowns" as
+           explicit formulas (a vector_field has three components; for the
+           MHD specs these are B = (Bx, By, Bz), psi, p).
         4. Hand verification: for each hard criterion in the task's criteria
            list, show the computation or say plainly that you could not
            complete it.
@@ -115,7 +134,7 @@ transforms:
         Schema:
         {
           "defs": {"<name>": "<expression>", ...},
-          "objects": {"B": ["<expr>", "<expr>", "<expr>"], "psi": "<expr>", "p": "<expr>"},
+          "objects": {"<unknown name>": "<expr> for a scalar_field, or [\"<expr>\", \"<expr>\", \"<expr>\"] for a vector_field", ...},
           "params": {"<free parameter name>": <number>},
           "derivation_notes": "<short: why this should satisfy the criteria>"
         }
@@ -135,7 +154,9 @@ transforms:
         - "defs" are optional named sub-expressions, evaluated in order; a
           def may use x, y, z, free parameters, and EARLIER defs only. A def
           must not be named x, y, z, or a free parameter name.
-        - "objects.p" may be written in terms of the name psi.
+        - Give exactly one entry in "objects" per unknown in the task's
+          "unknowns", under that unknown's name. An unknown with an "of"
+          field (e.g. p of psi) may be written in terms of that name.
         - Free parameters listed in the task's degrees_of_freedom may appear
           in expressions; give a value in "params" for each you use (it must
           lie inside its range).

@@ -1,0 +1,24 @@
+slug: harmonic-nonlinear
+title: Non-affine harmonic function (cheapest sanity domain)
+statement: >
+  Find an explicit scalar function phi(x, y, z) with Laplace's equation
+  laplacian(phi) = 0 everywhere that is NOT an affine function (its gradient
+  magnitude must vary from point to point). Give phi as a closed-form
+  expression in Cartesian (x, y, z).
+unknowns:
+  - {name: phi, kind: scalar_field, vars: [x, y, z]}
+criteria:
+  hard:
+    - {id: laplace,        check: divergence_zero, expr: "div(grad(phi))"}
+    - {id: gradient_varies, check: numeric_sample, kind: nonconstant, target: "dot(grad(phi), grad(phi))"}
+  soft:
+    - {id: novel, check: manual, note: "human literature check"}
+mechanism_hints:
+  - separation of variables
+  - real/imaginary part of an analytic function
+  - harmonic polynomials
+sample_box:
+  x: [-1.0, 1.0]
+  y: [-1.0, 1.0]
+  z: [-1.0, 1.0]
+budget: {max_usd: 1.00, max_wallclock_seconds: 1800, max_rounds: 2}

@@ -1,0 +1,30 @@
+slug: beltrami-force-free
+title: Force-free (Beltrami) magnetic field curl B = lambda B
+statement: >
+  Find an explicit, non-trivial magnetic field B in R^3 with curl B = lambda B
+  for a constant lambda != 0 (a force-free / Beltrami field) and div B = 0.
+  Give B as three closed-form expressions in Cartesian (x, y, z); lambda is
+  the free parameter "lam" (state its value in params). The zero field and
+  fields that satisfy the equation only for a different lambda do not count.
+  Non-axisymmetric fields are preferred but not required.
+unknowns:
+  - {name: B, kind: vector_field, vars: [x, y, z]}
+criteria:
+  hard:
+    - {id: div_free,   check: divergence_zero, expr: "div(B)"}
+    - {id: beltrami,   check: identity_zero,   expr: "curl(B) - lam*B"}
+    - {id: b_nonzero,  check: numeric_sample,  kind: nonzero, target: B}
+  soft:
+    - {id: nonaxisym,  check: numeric_sample,  kind: axisymmetry_breaking, target: B}
+    - {id: novel,      check: manual, note: "human literature check"}
+mechanism_hints:
+  - trigonometric superposition (ABC / Arnold-Beltrami-Childress flow)
+  - Chandrasekhar-Kendall modes
+  - helical plane waves
+degrees_of_freedom:
+  - {name: lam, range: [0.3, 3.0]}
+sample_box:
+  x: [-3.0, 3.0]
+  y: [-3.0, 3.0]
+  z: [-3.0, 3.0]
+budget: {max_usd: 2.00, max_wallclock_seconds: 3600, max_rounds: 3}

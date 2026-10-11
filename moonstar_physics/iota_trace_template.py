@@ -45,6 +45,7 @@ N_STEPS = 200
 AXIS_PSI_TOL = 1e-6
 AXIS_RHO_MIN = 0.1   # the axis must be a ring around the z-axis, not on it
 PSI_DRIFT_TOL = 1e-4
+N_AXIS_POINTS = 24
 BPHI_MIN = 1e-9
 
 
@@ -83,6 +84,31 @@ def rhs(phi, u):
     return [rho * br / bp, rho * bz / bp]
 
 
+def axis_tangent_max_sin(ax0, starts):
+    """Max over the axis of sin(angle between B and the axis tangent): ~0 for a true
+    magnetic axis (B tangent to the closed axis curve), large for a mere psi minimum."""
+    n = N_AXIS_POINTS
+    pts, guess = [], ax0
+    for k in range(n):
+        ph = 2 * np.pi * k / n
+        guess, pmin = find_axis(ph, [guess])
+        if pmin > AXIS_PSI_TOL:
+            g2, p2 = find_axis(ph, starts)
+            if p2 < pmin:
+                guess, pmin = g2, p2
+        pts.append((guess[0] * np.cos(ph), guess[0] * np.sin(ph), guess[1]))
+    pts = np.array(pts)
+    worst = 0.0
+    for k in range(n):
+        tangent = pts[(k + 1) % n] - pts[(k - 1) % n]
+        b = np.array([float(v) for v in field(*pts[k])])
+        denom = np.linalg.norm(b) * np.linalg.norm(tangent)
+        if not np.isfinite(denom) or denom < 1e-300:
+            raise ValueError("field or axis tangent vanishes on the axis")
+        worst = max(worst, float(np.linalg.norm(np.cross(b, tangent)) / denom))
+    return worst
+
+
 def main():
     starts = [(r, z) for r in np.linspace(RHO_LO, RHO_HI, 8) for z in np.linspace(Z_LO, Z_HI, 5)]
     ax0, psi_min = find_axis(0.0, starts)
@@ -90,6 +116,7 @@ def main():
         return {"error": "psi has no zero minimum in the meridional plane (min %.3g)" % psi_min}
     if ax0[0] < AXIS_RHO_MIN:
         return {"error": "magnetic axis lies on the z-axis (rho=%.3g), not a closed toroidal axis" % ax0[0]}
+    axis_sin = axis_tangent_max_sin(ax0, starts)
     phis = np.linspace(0.0, 2 * np.pi, N_STEPS + 1)
     iotas = []
     drift = 0.0
@@ -122,7 +149,8 @@ def main():
     return {"iota": sum(iotas) / len(iotas), "iota_seeds": iotas,
             "iota_spread": max(iotas) - min(iotas),
             "psi_drift": float(drift), "axis_psi_min": psi_min,
-            "axis_psi_max": float(axis_psi_max)}
+            "axis_psi_max": float(axis_psi_max),
+            "axis_tangent_max_sin": axis_sin}
 
 
 if __name__ == "__main__":

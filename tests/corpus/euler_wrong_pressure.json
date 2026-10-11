@@ -1,0 +1,11 @@
+{
+ "objects": {
+  "u": [
+   "sin(x)*cos(y)",
+   "-cos(x)*sin(y)",
+   "0"
+  ],
+  "p": "0",
+  "f": "sin(x)*sin(y)"
+ }
+}

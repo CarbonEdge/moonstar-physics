@@ -13,7 +13,7 @@ from moonstar_physics.construct_criteria_transform import ConstructCriteriaTrans
 _SPEC = str(Path(__file__).resolve().parents[1] / "constructs" / "analytic-3d-mhd-equilibrium.yaml")
 
 _CHECKABLE_HARD = ("div_free", "flux_surface", "force_balance", "psi_nonneg",
-                   "psi_nonconstant", "p_nonconstant", "nonaxisym")
+                   "psi_nonconstant", "p_nonconstant", "nonaxisym", "nested_surfaces")
 
 
 @pytest.fixture
@@ -40,7 +40,7 @@ def _status(out: dict, cid: str) -> str:
 async def test_all_checkable_pass_but_iota_unverified_is_partial(ctx):
     out = await _run(_results(), ctx)
     assert out["verdict"] == "PARTIAL"
-    assert out["unverified_hard"] == ["iota_nonzero"]
+    assert out["unverified_hard"] == ["axis_is_field_line", "iota_nonzero"]
     assert out["unmet_hard"] == []
     assert _status(out, "iota_nonzero") == "unverified"
     assert _status(out, "div_free") == "met"
@@ -83,6 +83,7 @@ async def test_missing_result_is_unverified_not_met(ctx):
 async def test_constructed_when_every_hard_criterion_is_met(ctx):
     inp = _results()
     inp["checks"]["results"].append({"id": "iota_nonzero", "check": "sandbox_experiment", "status": "pass"})
+    inp["checks"]["results"].append({"id": "axis_is_field_line", "check": "sandbox_experiment", "status": "pass"})
     out = await _run(inp, ctx)
     assert out["verdict"] == "CONSTRUCTED"
     assert out["unmet_hard"] == [] and out["unverified_hard"] == []
@@ -112,13 +113,14 @@ _MHD_SPEC = str(Path(__file__).parent.parent / "constructs" / "analytic-3d-mhd-e
 
 def _all_pass_checks() -> dict:
     ids = ["div_free", "flux_surface", "force_balance", "psi_nonneg",
-           "psi_nonconstant", "p_nonconstant", "nonaxisym"]
+           "psi_nonconstant", "p_nonconstant", "nonaxisym", "nested_surfaces"]
     return {"results": [{"id": i, "check": "x", "status": "pass"} for i in ids]}
 
 
 async def test_sources_merge_checker_and_iota_rows_into_constructed():
     iota = {"results": [
         {"id": "iota_nonzero", "check": "sandbox_experiment", "status": "pass", "iota": -2.0},
+        {"id": "axis_is_field_line", "check": "sandbox_experiment", "status": "pass"},
         {"id": "iota_noninteger", "check": "sandbox_experiment", "status": "fail", "iota": -2.0},
     ]}
     out = await ConstructCriteriaTransform(
@@ -140,7 +142,7 @@ async def test_iota_error_keeps_verdict_partial():
         {"spec_path": _MHD_SPEC, "sources": ["checks", "iota"]}, SessionContext(),
     )
     assert out["verdict"] == "PARTIAL"
-    assert out["unverified_hard"] == ["iota_nonzero"]
+    assert out["unverified_hard"] == ["axis_is_field_line", "iota_nonzero"]   # a missing row is unverified
 
 
 async def test_missing_listed_source_is_an_error():

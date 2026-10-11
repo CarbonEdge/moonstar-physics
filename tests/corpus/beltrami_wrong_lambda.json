@@ -1,0 +1,12 @@
+{
+ "objects": {
+  "B": [
+   "sin(z)+cos(y)",
+   "sin(x)+cos(z)",
+   "sin(y)+cos(x)"
+  ]
+ },
+ "params": {
+  "lam": 2.0
+ }
+}

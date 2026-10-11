@@ -31,7 +31,7 @@ async def test_iota2_fixture_integer_iota_passes_nonzero_fails_noninteger(monkey
     monkeypatch.setattr(mod, "_run_sandbox", fake_sandbox)
     out = await IotaTraceTransform(_inp(_FIXTURE), {"spec_path": _SPEC}, _CTX)
     rows = _by_id(out)
-    assert set(rows) == {"iota_nonzero", "iota_noninteger"}
+    assert set(rows) == {"iota_nonzero", "iota_noninteger", "axis_is_field_line"}
     assert rows["iota_nonzero"]["status"] == "pass"
     assert rows["iota_noninteger"]["status"] == "fail"     # iota = -2 is an integer
     assert abs(rows["iota_nonzero"]["iota"] + 2.0) < 1e-4
@@ -140,3 +140,22 @@ async def test_one_surface_near_an_integer_fails_noninteger(monkeypatch):
     rows = _by_id(await IotaTraceTransform(_inp(_FIXTURE), {"spec_path": _SPEC}, _CTX))
     assert rows["iota_nonzero"]["status"] == "pass"
     assert rows["iota_noninteger"]["status"] == "fail"
+
+@pytest.mark.parametrize("sin, status", [(0.001, "pass"), (0.4, "fail"), (None, "error")])
+async def test_axis_is_field_line_judged_on_axis_tangent_sin(monkeypatch, sin, status):
+    result = {"iota": 0.3, "iota_seeds": [0.3], "iota_spread": 0.0, "psi_drift": 0.0}
+    if sin is not None:
+        result["axis_tangent_max_sin"] = sin
+
+    async def fake(script, timeout_seconds):
+        return {"ran": True, "result": result, "detail": None, "stdout": "", "exit_code": 0}
+
+    monkeypatch.setattr(mod, "_run_sandbox", fake)
+    out = await IotaTraceTransform(_inp(_FIXTURE), {"spec_path": _SPEC}, _CTX)
+    assert _by_id(out)["axis_is_field_line"]["status"] == status
+
+
+async def test_axis_is_field_line_passes_for_the_real_iota2_trace(monkeypatch):
+    monkeypatch.setattr(mod, "_run_sandbox", fake_sandbox)
+    out = await IotaTraceTransform(_inp(_FIXTURE), {"spec_path": _SPEC}, _CTX)
+    assert _by_id(out)["axis_is_field_line"]["status"] == "pass"

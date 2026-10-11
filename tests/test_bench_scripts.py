@@ -51,7 +51,7 @@ def test_main_writes_summary_md_and_handles_an_empty_dir(tmp_path, capsys):
 
 def test_parse_args():
     p = bench_construct.parse_args(["b.py", "s.yaml", "--tag", "t", "--n", "3", "--max-rounds", "4", "--models", "m.json"])
-    assert p == {"spec": "s.yaml", "n": 3, "tag": "t", "max_rounds": 4, "models": "m.json", "note": None}
+    assert p == {"spec": "s.yaml", "n": 3, "tag": "t", "max_rounds": 4, "models": "m.json", "note": None, "candidates": 2}
     assert bench_construct.parse_args(["b.py", "s.yaml"]) is None                      # --tag is required
     assert bench_construct.parse_args(["b.py", "s.yaml", "--tag", "t", "--n", "0"]) is None
     assert bench_construct.parse_args(["b.py", "s.yaml", "--tag", "t", "--bogus", "1"]) is None

@@ -56,6 +56,10 @@ def _format_summary(result: dict[str, Any]) -> str:
     parts = [_format(by_name[f"criteria_{best}"])]
     if "synthesizer" in by_name:
         parts += ["", "--- synthesizer ---", by_name["synthesizer"].get("response", "")]
+    fam = result.get("best_family") or {}
+    if fam.get("mechanism") or fam.get("tags"):
+        parts += ["", f"family: {fam.get('mechanism') or '?'} [{', '.join(fam.get('tags') or [])}]"
+                      " (a label for the literature check, not a novelty claim)"]
     rounds = result.get("rounds") or []
     if rounds:
         parts += ["", f"rounds: {len(rounds)} (stop: {result.get('stop_reason')}, "
@@ -83,11 +87,11 @@ def _format_summary(result: dict[str, Any]) -> str:
     return "\n".join(parts)
 
 
-def _parse_args(argv: list[str]) -> tuple[str, int | None, str | None] | None:
-    """`<spec> [--max-rounds N] [--models PATH]` -> (spec, max_rounds, models_path)."""
+def _parse_args(argv: list[str]) -> tuple[str, int | None, str | None, int] | None:
+    """`<spec> [--max-rounds N] [--models PATH] [--candidates K]` -> (spec, max_rounds, models_path, candidates)."""
     if len(argv) < 2:
         return None
-    spec, max_rounds, models = argv[1], None, None
+    spec, max_rounds, models, candidates = argv[1], None, None, 2
     rest = argv[2:]
     while rest:
         if len(rest) < 2:
@@ -100,13 +104,20 @@ def _parse_args(argv: list[str]) -> tuple[str, int | None, str | None] | None:
                 return None
         elif flag == "--models":
             models = value
+        elif flag == "--candidates":
+            try:
+                candidates = int(value)
+            except ValueError:
+                return None
+            if not 2 <= candidates <= 6:
+                return None
         else:
             return None
         rest = rest[2:]
-    return spec, max_rounds, models
+    return spec, max_rounds, models, candidates
 
 
-async def _run(spec_path: str, max_rounds: int | None, models_path: str | None = None) -> int:
+async def _run(spec_path: str, max_rounds: int | None, models_path: str | None = None, candidates: int = 2) -> int:
     gateway_url = os.environ.get("MOONSTAR_GATEWAY_URL", "http://localhost:8000")
     token = os.environ.get("MOONSTAR_AUTH_TOKEN")
     if not token:
@@ -115,7 +126,7 @@ async def _run(spec_path: str, max_rounds: int | None, models_path: str | None =
     spec = load_construct_spec(spec_path)
     result = await run_construct(
         spec_path, gateway_url, token, _PIPELINE_PATH, models_path or _MODELS_PATH,
-        max_rounds=max_rounds,
+        max_rounds=max_rounds, candidates_per_round=candidates,
     )
     saved = _save_run(spec.slug, result["session_id"], result)
     print(_format_summary(result))

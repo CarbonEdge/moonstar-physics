@@ -180,3 +180,51 @@ async def test_seed_config_changes_the_draws_and_is_reported():
     assert a0["seed"] == 0 and a1["seed"] == 1
     assert resid(a0) == resid(a0b)            # default is seed 0, reproducible
     assert resid(a0) != resid(a1)             # a different seed draws different points
+
+def _nested_spec(tmp_path):
+    import yaml
+    from pathlib import Path as _P
+    data = yaml.safe_load((_P(__file__).parent.parent / "constructs" / "analytic-3d-mhd-equilibrium.yaml").read_text(encoding="utf-8"))
+    data["criteria"]["hard"].append({"id": "nested", "check": "numeric_sample", "kind": "nested_surfaces", "target": "psi"})
+    p = tmp_path / "s.yaml"
+    p.write_text(yaml.safe_dump(data), encoding="utf-8")
+    return str(p)
+
+
+async def _nested_status(tmp_path, psi):
+    import json as _j
+    from moonstar_physics._compat import SessionContext
+    cand = {"objects": {"B": ["-y", "x", "0"], "psi": psi, "p": "1-psi"}}
+    out = await VectorCalculusCheckTransform(
+        {"G": {"response": _j.dumps(cand)}}, {"spec_path": _nested_spec(tmp_path), "source": "G"}, SessionContext())
+    return {r["id"]: r for r in out["results"]}["nested"]
+
+
+async def test_nested_surfaces_pass_for_a_single_well_torus(tmp_path):
+    assert (await _nested_status(tmp_path, "(sqrt(x**2+y**2)-1)**2+z**2"))["status"] == "pass"
+
+
+async def test_nested_surfaces_fail_for_two_wells(tmp_path):
+    # wells at rho=0.6 (deeper, the minimum) and rho=1.2: psi falls then rises along a ray between them
+    psi = "(sqrt(x**2+y**2)-0.6)**2*(sqrt(x**2+y**2)-1.2)**2+0.002*(sqrt(x**2+y**2)-0.6)**2+z**2"
+    row = await _nested_status(tmp_path, psi)
+    assert row["status"] == "fail" and row["n_bad_rays"] > 0 and "second well" in row["detail"]
+
+
+async def test_nested_surfaces_error_when_psi_undefined_everywhere(tmp_path):
+    assert (await _nested_status(tmp_path, "sqrt(-1-x**2)"))["status"] == "error"
+
+
+def test_axisymmetry_deviation_is_translation_invariant():
+    import numpy as np
+    import sympy
+    from moonstar_physics.vector_calculus_check_transform import axisymmetry_deviation
+    x, y, z = sympy.symbols("x y z")
+    rng = np.random.default_rng(0)
+    arrays = [rng.uniform(-1.5, 1.5, 2000), rng.uniform(-1.5, 1.5, 2000), rng.uniform(-0.5, 0.5, 2000)]
+    swirl_about = lambda cx: (-(y), (x - cx), sympy.Integer(0))                      # noqa: E731
+    shifted = (-(y), (x - 0.3), sympy.Integer(0))
+    dev, centre, n = axisymmetry_deviation(shifted, [x, y, z], arrays)
+    assert dev < 1e-6 and abs(centre[0] - 0.3) < 1e-3 and n > 1000        # axisymmetric about x=0.3
+    helical = (sympy.sin(x), sympy.cos(y) + z, sympy.sin(x * y))
+    assert axisymmetry_deviation(helical, [x, y, z], arrays)[0] > 1e-3    # genuinely not axisymmetric

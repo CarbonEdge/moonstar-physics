@@ -21,6 +21,7 @@ from .vector_calculus_check_transform import _CandidateError, _load_candidate, _
 
 _IOTA_ZERO_TOL = 1e-3
 _INTEGER_TOL = 1e-3
+_AXIS_TANGENT_TOL = 0.05   # max sin(angle(B, axis tangent)) for a true magnetic axis
 _DEFAULT_TIMEOUT_SECONDS = 60
 _CTX = SessionContext()
 _META = {"_model": "none", "_provider": "none", "_input_tokens": 0, "_output_tokens": 0}
@@ -40,6 +41,11 @@ def _row(c: Criterion, status: str, **extra: Any) -> dict[str, Any]:
 
 def _judge(c: Criterion, iotas: list[float], iota: float, extra: dict[str, Any]) -> dict[str, Any]:
     """Judged on every seed surface: iota may differ between surfaces (magnetic shear)."""
+    if c.kind == "axis_is_field_line":
+        sin = extra.get("axis_tangent_max_sin")
+        if not isinstance(sin, (int, float)):
+            return _row(c, "error", detail="trace reported no axis_tangent_max_sin", **extra)
+        return _row(c, "pass" if sin < _AXIS_TANGENT_TOL else "fail", **extra)
     if c.kind == "iota_nonzero":
         same_sign = all(v > 0 for v in iotas) or all(v < 0 for v in iotas)
         ok = same_sign and all(abs(v) > _IOTA_ZERO_TOL for v in iotas)
@@ -94,6 +100,7 @@ async def IotaTraceTransform(
         "iota_seeds": result.get("iota_seeds"),
         "iota_spread": result.get("iota_spread"),
         "psi_drift": result.get("psi_drift"),
+        "axis_tangent_max_sin": result.get("axis_tangent_max_sin"),
     }
     return {
         "results": [_judge(c, iotas, float(result["iota"]), extra) for c in targets],

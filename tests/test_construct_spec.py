@@ -143,7 +143,7 @@ def test_sandbox_experiment_requires_known_kind():
 def test_real_spec_sandbox_criteria_have_kinds():
     spec = load_construct_spec(Path(__file__).parent.parent / "constructs" / "analytic-3d-mhd-equilibrium.yaml")
     kinds = {c.id: c.kind for c in spec.criteria if c.check == "sandbox_experiment"}
-    assert kinds == {"iota_nonzero": "iota_nonzero", "iota_noninteger": "iota_noninteger"}
+    assert kinds == {"iota_nonzero": "iota_nonzero", "iota_noninteger": "iota_noninteger", "axis_is_field_line": "axis_is_field_line"}
 
 
 def test_second_spec_loads_and_is_axisymmetric_control():
@@ -154,3 +154,11 @@ def test_second_spec_loads_and_is_axisymmetric_control():
     ids = {c.id for c in spec.criteria}
     assert "nonaxisym" not in ids and "iota_nonzero" in ids
     assert spec.degrees_of_freedom == ()
+
+def test_p41_kinds_parse_and_unknown_kinds_are_still_rejected():
+    from moonstar_physics.construct_spec import NUMERIC_KINDS, SANDBOX_KINDS, ConstructSpecError, _parse_criterion
+    assert "nested_surfaces" in NUMERIC_KINDS and "axis_is_field_line" in SANDBOX_KINDS
+    assert _parse_criterion({"id": "n", "check": "numeric_sample", "kind": "nested_surfaces", "target": "psi"}, True).kind == "nested_surfaces"
+    assert _parse_criterion({"id": "a", "check": "sandbox_experiment", "kind": "axis_is_field_line"}, True).kind == "axis_is_field_line"
+    with pytest.raises(ConstructSpecError):
+        _parse_criterion({"id": "n", "check": "numeric_sample", "kind": "bogus", "target": "psi"}, True)

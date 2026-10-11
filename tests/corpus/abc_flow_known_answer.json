@@ -1,0 +1,13 @@
+{
+ "objects": {
+  "B": [
+   "sin(z)+cos(y)",
+   "sin(x)+cos(z)",
+   "sin(y)+cos(x)"
+  ]
+ },
+ "params": {
+  "lam": 1.0
+ },
+ "derivation_notes": "ABC flow A=B=C=1, k=1: curl B = B."
+}

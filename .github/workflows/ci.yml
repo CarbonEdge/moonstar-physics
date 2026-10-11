@@ -1,0 +1,24 @@
+name: ci
+
+on:
+  push:
+  pull_request:
+  schedule:
+    - cron: "17 3 * * *"   # nightly: full suite incl. the adversarial-corpus replay
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.13"
+          cache: pip
+      - name: Install
+        run: pip install -e . pytest pytest-asyncio
+      # The Docker-sandbox test skips itself when the sandbox image is not built, so no image is needed here.
+      - name: Tests
+        run: python -m pytest tests -q
+      - name: Corpus replay (labels must match the deterministic checker)
+        run: python -m pytest tests/test_corpus_verdicts.py tests/test_construct_replay.py -q

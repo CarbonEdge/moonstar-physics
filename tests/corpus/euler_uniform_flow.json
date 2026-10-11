@@ -1,0 +1,12 @@
+{
+ "objects": {
+  "u": [
+   "1",
+   "0",
+   "0"
+  ],
+  "p": "0",
+  "f": "y"
+ },
+ "derivation_notes": "uniform flow satisfies Euler and u.grad(y)=0 but has no vorticity"
+}

@@ -21,9 +21,12 @@ _CORPUS = Path(__file__).parent / "corpus"
 _SPECS = {
     "mhd": _ROOT / "constructs" / "analytic-3d-mhd-equilibrium.yaml",
     "axisym": _ROOT / "constructs" / "axisymmetric-mhd-equilibrium.yaml",
+    "beltrami": _ROOT / "constructs" / "beltrami-force-free.yaml",
+    "euler": _ROOT / "constructs" / "euler-invariant-surfaces.yaml",
+    "harmonic": _ROOT / "constructs" / "harmonic-nonlinear.yaml",
 }
 _EXPECTED = yaml.safe_load((_CORPUS / "expected.yaml").read_text(encoding="utf-8"))
-_GENUINE_PREFIXES = ("iota2_", "solovev_", "axisym_model_found")
+_GENUINE_PREFIXES = ("iota2_", "solovev_", "axisym_model_found", "abc_flow_", "taylor_green_", "harmonic_exp_cos")
 
 
 def test_corpus_and_labels_are_in_sync_and_large_enough():
